@@ -1,0 +1,9 @@
+{
+	"version": "2.0.0",
+	"command": "npm",
+	"type": "shell",
+	"presentation" : { "reveal": "always", "panel": "new"},
+	"args": ["run", "compile", "--loglevel", "silent"],
+	"isBackground": true,
+	"problemMatcher": "$tsc-watch"
+}
