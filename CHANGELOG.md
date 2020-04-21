@@ -1,3 +1,6 @@
+## 0.5.22
+* Contrast icon
+
 ## 0.4.22
 * Implement validation of the target file
 * Fix SourceMap locations
