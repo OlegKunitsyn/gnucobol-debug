@@ -77,9 +77,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 				}
 
 				if (this.verbose)
-					this.log("stderr", "Compiled  " + code);
+					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
 				
-				this.map = new SourceMap(target);
+				this.map = new SourceMap(cwd, target);
+				if (this.verbose)
+					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getVarsCount()}`);
+
+				target = nativePath.resolve(cwd, nativePath.basename(target));
 				if (process.platform === "win32") {
 					target = target.split('.').slice(0, -1).join('.') + '.exe';
 				} else {
@@ -88,7 +92,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 				this.process = ChildProcess.spawn(this.gdbpath, args, { cwd: cwd, env: this.procEnv });
 				this.process.stdout.on("data", this.stdout.bind(this));
-				this.process.stderr.on("data", this.stderr.bind(this));
+				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
 				const promises = this.initCommands(target, cwd);

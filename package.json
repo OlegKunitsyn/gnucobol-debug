@@ -1,20 +1,21 @@
 {
 	"name": "gnucobol-debug",
-	"displayName": "COBOL debugger BETA",
-	"description": "Debug or execute your COBOL code",
+	"displayName": "COBOL debugger",
+	"description": "Debug or execute COBOL code. No mainframe required. Beta.",
 	"keywords": [
 		"cobol",
 		"gnucobol",
-		"debugger"
+		"debugger",
+		"debug"
 	],
-	"version": "0.3.22",
+	"version": "0.4.22",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
 	"engines": {
 		"vscode": "^1.44.0"
 	},
-	"main": "./out/src/extension.js",
+	"main": "./out/src/extension",
 	"activationEvents": [
 		"onCommand:gnucobol-debug.validateFile"
 	],
@@ -115,6 +116,8 @@
 		"vscode": "^1.1.36"
 	},
 	"dependencies": {
+		"vscode-debugadapter": "^1.40.0",
+		"vscode-debugprotocol": "^1.40.0",
 		"n-readlines": "^1.0.0"
 	}
 }

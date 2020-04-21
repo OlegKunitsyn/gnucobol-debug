@@ -33,8 +33,8 @@ export class SourceMap {
 	private cwd: string;
 	private lines: Line[] = new Array<Line>();
 	private variables: Variable[] = new Array<Variable>();
-	constructor(fileCobol: string) {
-		this.cwd = nativePath.dirname(fileCobol);
+	constructor(cwd: string, fileCobol: string) {
+		this.cwd = cwd;
 		this.parse(nativePath.basename(fileCobol.split('.').slice(0, -1).join('.') + '.c'));
 	}
 

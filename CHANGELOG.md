@@ -1,4 +1,7 @@
+## 0.4.22
+* Implement validation of the target file
+* Fix SourceMap locations
 
-## 0.2.22 - Beta
+## 0.3.22
 * Implement execution of COBOL program `CTRL+F5`
 * Implement debugging of COBOL program `F5`
