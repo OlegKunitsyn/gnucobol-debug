@@ -1,3 +1,7 @@
+## 0.6.22
+* Fix breakpoints in the Compilation Group
+* Add tests
+
 ## 0.5.22
 * Contrast icon
 

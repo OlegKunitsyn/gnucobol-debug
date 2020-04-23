@@ -45,7 +45,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	gdbpath: string;
 	cobcpath: string;
 	env: any;
-	arguments: string;
+	group: string[];
 	verbose: boolean;
 }
 
@@ -117,7 +117,7 @@ class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.load(args.cwd, args.target, args.arguments).then(() => {
+		this.miDebugger.load(args.cwd, args.target, args.group).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);

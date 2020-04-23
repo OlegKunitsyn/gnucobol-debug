@@ -1,5 +1,7 @@
 out/
 node_modules/
 assets/
-test/
+test/resources/.vscode
 *.vsix
+sample
+hello

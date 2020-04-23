@@ -1,9 +1,9 @@
-import {Breakpoint, IDebugger, MIError, Stack, Thread, Variable, VariableObject} from "./debugger";
+import { Breakpoint, IDebugger, MIError, Stack, Thread, Variable, VariableObject } from "./debugger";
 import * as ChildProcess from "child_process";
-import {EventEmitter} from "events";
-import {MINode, parseMI} from './parser.mi2';
+import { EventEmitter } from "events";
+import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
-import {SourceMap} from "./parser.c";
+import { SourceMap } from "./parser.c";
 
 const nonOutput = /^(?:\d*|undefined)[\*\+\=]|[\~\@\&\^]/;
 const gdbMatch = /(?:\d*|undefined)\(gdb\)/;
@@ -22,14 +22,13 @@ function couldBeOutput(line: string) {
 export class MI2 extends EventEmitter implements IDebugger {
 	private map: SourceMap;
 	public procEnv: any;
-	protected currentToken: number = 1;
-	protected handlers: { [index: number]: (info: MINode) => any } = {};
-	protected breakpoints: Map<Breakpoint, Number> = new Map();
-	protected buffer: string;
-	protected errbuf: string;
-	protected process: ChildProcess.ChildProcess;
-	public preargs: string[] = ["-q", "--interpreter=mi2"];
-	public extraargs: string[]
+	private currentToken: number = 1;
+	private handlers: { [index: number]: (info: MINode) => any } = {};
+	private breakpoints: Map<Breakpoint, Number> = new Map();
+	private buffer: string;
+	private errbuf: string;
+	private process: ChildProcess.ChildProcess;
+	private gdbArgs: string[] = ["-q", "--interpreter=mi2"];
 
 	constructor(public gdbpath: string, public cobcpath: string, procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
@@ -53,22 +52,23 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 	}
 
-	load(cwd: string, target: string, procArgs: string): Thenable<any> {
+	load(cwd: string, target: string, group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
+		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
-			const args = this.preargs.concat(this.extraargs || []);
-
 			if (!!this.noDebug) {
-				const buildProcess = ChildProcess.spawn(this.cobcpath, ['-x', '-j', target], { cwd: cwd, env: this.procEnv });
+				const args = ['-free', '-x', '-j', target].concat(group);
+				const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 				buildProcess.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				buildProcess.stdout.on("data", ((data) => { this.log("stdout", data); }).bind(this));
 				buildProcess.on("exit", (() => { this.emit("quit"); }).bind(this));
 				return;
 			}
 
-			const buildProcess = ChildProcess.spawn(this.cobcpath, ['-g', '-d', '-x', '-fdebugging-line', '-fsource-location', '-ftraceall', target], { cwd: cwd, env: this.procEnv });
+			const args = ['-free', '-x', '-g', '-d', '-fdebugging-line', '-fsource-location', '-ftraceall', target].concat(group);
+			const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 			buildProcess.stderr.on("data", ((err) => { this.emit("launcherror", err); }).bind(this));
 			buildProcess.on('exit', (code) => {
 				if (code !== 0) {
@@ -78,10 +78,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 				if (this.verbose)
 					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
-				
-				this.map = new SourceMap(cwd, target);
-				if (this.verbose)
+
+				this.map = new SourceMap(cwd, [target].concat(group));
+
+				if (this.verbose) {
 					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getVarsCount()}`);
+					this.log("stderr", this.map.toString());
+				}
 
 				target = nativePath.resolve(cwd, nativePath.basename(target));
 				if (process.platform === "win32") {
@@ -90,14 +93,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 					target = target.split('.').slice(0, -1).join('.');
 				}
 
-				this.process = ChildProcess.spawn(this.gdbpath, args, { cwd: cwd, env: this.procEnv });
+				this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, { cwd: cwd, env: this.procEnv });
 				this.process.stdout.on("data", this.stdout.bind(this));
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
 				const promises = this.initCommands(target, cwd);
-				if (procArgs && procArgs.length)
-					promises.push(this.sendCommand("exec-arguments " + procArgs));
 				Promise.all(promises).then(() => {
 					this.emit("debug-ready");
 					resolve();
@@ -123,9 +124,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 			if (executable && !nativePath.isAbsolute(executable))
 				executable = nativePath.join(cwd, executable);
 			if (executable)
-				args = args.concat([executable], this.preargs);
+				args = args.concat([executable], this.gdbArgs);
 			else
-				args = this.preargs;
+				args = this.gdbArgs;
 			this.process = ChildProcess.spawn(this.gdbpath, args, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
@@ -404,7 +405,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 						location += "-t -i " + parseInt(match) + " ";
 				}
 			}
-			
+
 			let map = this.map.getLineC(breakpoint.file, breakpoint.line);
 			if (breakpoint.raw)
 				location += '"' + escape(breakpoint.raw) + '"';
