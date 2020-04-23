@@ -20,7 +20,7 @@ A VS Code extension to debug or execute GnuCOBOL code. [Install from VS Code Mar
 ![Screenshot](screenshot.png)
 
 ### Requirements
-* GnuCOBOL `cobc` 4.2+ installed
+* GnuCOBOL `cobc` 2.2+ installed
 * GNU Debugger `gdb` 8.3+ installed
 
 ### Usage
