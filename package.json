@@ -30,6 +30,24 @@
 		"breakpoints": [
 			{
 				"language": "cobol"
+			},
+			{
+				"language": "COBOL"
+			},
+			{
+				"language": "Cobol"
+			},
+			{
+				"language": "ACUCOBOL"
+			},
+			{
+				"language": "GnuCOBOL"
+			},
+			{
+				"language": "OpenCOBOL"
+			},
+			{
+				"language": "entcobol"
 			}
 		],
 		"debuggers": [
