@@ -20,8 +20,9 @@ A VS Code extension to debug or execute GnuCOBOL code. [Install from VS Code Mar
 ![Screenshot](screenshot.png)
 
 ### Requirements
-* GnuCOBOL `cobc` 2.2+ installed
-* GNU Debugger `gdb` 8.3+ installed
+* GnuCOBOL `cobc` 2.2+ installed.
+* GNU Debugger `gdb` 8.3+ installed.
+* A COBOL-syntax extension i.e. `ibm.zopeneditor`, `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `bitlang.cobol` installed. Otherwise, the breakpoints will be unavailable.
 
 ### Usage
 When your `launch.json` config is set up, you can debug or execute your COBOL program. If you debug a Compilation Group (main- and sub- programs), you need to list sub-programs inside `group` property. Here's an example:
@@ -37,6 +38,7 @@ When your `launch.json` config is set up, you can debug or execute your COBOL pr
             "cwd": "${workspaceRoot}",
             "gdbpath": "gdb",
             "cobcpath": "cobc",
+            "cobcargs": ["-free", "-x"],
             "group": ["subsample.cbl", "subsubsample.cbl"]
         }
     ]
@@ -69,6 +71,7 @@ Add `verbose` property to your `launch.json` and start debugiing session. In `DE
             "cwd": "${workspaceRoot}",
             "gdbpath": "gdb",
             "cobcpath": "cobc",
+            "cobcargs": ["-free", "-x"],
             "verbose": true
         }
     ]

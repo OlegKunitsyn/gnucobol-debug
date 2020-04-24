@@ -44,6 +44,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	target: string;
 	gdbpath: string;
 	cobcpath: string;
+	cobcargs: string[];
 	env: any;
 	group: string[];
 	verbose: boolean;
@@ -71,7 +72,7 @@ class GDBDebugSession extends DebugSession {
 	}
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {		
-		this.miDebugger = new MI2(args.gdbpath, args.cobcpath, args.env, args.verbose, args.noDebug);
+		this.miDebugger = new MI2(args.gdbpath, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug);
 		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
 		this.miDebugger.on("exited-normally", this.quitEvent.bind(this));

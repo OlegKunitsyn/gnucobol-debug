@@ -8,7 +8,7 @@
 		"debugger",
 		"debug"
 	],
-	"version": "0.6.22",
+	"version": "0.7.22",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -30,6 +30,21 @@
 		"breakpoints": [
 			{
 				"language": "cobol"
+			},
+			{
+				"language": "COBOL"
+			},
+			{
+				"language": "ACUCOBOL"
+			},
+			{
+				"language": "OpenCOBOL"
+			},
+			{
+				"language": "GnuCOBOL"
+			},
+			{
+				"language": "entcobol"
 			}
 		],
 		"debuggers": [
@@ -68,6 +83,13 @@
 								"description": "Path to cobc",
 								"default": "cobc"
 							},
+							"cobcargs": {
+								"type": "array",
+								"description": "Extra arguments for cobc",
+								"default": [
+									"-free"
+								]
+							},
 							"group": {
 								"type": "array",
 								"description": "Compilation Group for executable",
@@ -95,6 +117,7 @@
 						"cwd": "${workspaceRoot}",
 						"gdbpath": "gdb",
 						"cobcpath": "cobc",
+						"cobcargs": ["-free"],
 						"group": []
 					}
 				]
