@@ -100,6 +100,40 @@
 								"type": "boolean",
 								"description": "Debug GDB",
 								"default": false
+							},
+							"freeSourceFormat": {
+								"type": "boolean",
+								"description": "Use Free source format (-free)",
+								"default": true
+							},
+							"dialect": {
+								"type": "string",
+								"description": "warnings/features for a specific dialect (-std=)",
+								"enum": [
+									"default",
+									"cobol2014",
+									"cobol2002",
+									"cobol85",
+									"xopen",
+									"ibm-strict",
+									"ibm",
+									"mvs-strict",
+									"mvs",
+									"mf-strict",
+									"mf",
+									"bs2000-strict",
+									"bs2000",
+									"acu-strict",
+									"acu",
+									"rm-strict",
+									"rm"
+								],
+								"default": "default"
+							},
+							"cobcArgs": {
+								"type": "string",
+								"description": "Extend cobc arguments",
+								"default": ""
 							}
 						}
 					}
@@ -113,7 +147,9 @@
 						"cwd": "${workspaceRoot}",
 						"gdbpath": "gdb",
 						"cobcpath": "cobc",
-						"group": []
+						"group": [],
+						"freeSourceFormat": true,
+						"dialect": "default"
 					}
 				]
 			}

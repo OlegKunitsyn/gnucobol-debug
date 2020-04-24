@@ -30,7 +30,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private process: ChildProcess.ChildProcess;
 	private gdbArgs: string[] = ["-q", "--interpreter=mi2"];
 
-	constructor(public gdbpath: string, public cobcpath: string, procEnv: any, public verbose: boolean, public noDebug: boolean) {
+	constructor(public gdbpath: string, public cobcpath: string, procEnv: any, public verbose: boolean, public noDebug: boolean, public freeSourceFormat: boolean, public dialect: string, public cobcArgs: string) {
 		super();
 		if (procEnv) {
 			const env = {};
@@ -59,7 +59,16 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
-				const args = ['-free', '-x', '-j', target].concat(group);
+				const args = ['-x', '-j', target].concat(group);
+				if(!!this.freeSourceFormat){
+					args.push('-free');
+				}
+				if(this.dialect){
+					args.push(`-std=${this.dialect}`);
+				}
+				if(this.cobcArgs != null){
+					args.push(this.cobcArgs);
+				}
 				const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 				buildProcess.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				buildProcess.stdout.on("data", ((data) => { this.log("stdout", data); }).bind(this));
@@ -67,7 +76,20 @@ export class MI2 extends EventEmitter implements IDebugger {
 				return;
 			}
 
-			const args = ['-free', '-x', '-g', '-d', '-fdebugging-line', '-fsource-location', '-ftraceall', target].concat(group);
+			const args = ['-x', '-g', '-d', '-fdebugging-line', '-fsource-location', '-ftraceall', target].concat(group);
+
+			if(!!this.freeSourceFormat){
+				args.push('-free');
+			}
+
+			if(this.dialect){
+				args.push(`-std=${this.dialect}`);
+			}
+
+			if(this.cobcArgs != null){
+				args.push(this.cobcArgs);
+			}
+
 			const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 			buildProcess.stderr.on("data", ((err) => { this.emit("launcherror", err); }).bind(this));
 			buildProcess.on('exit', (code) => {
