@@ -1,3 +1,6 @@
+## 0.8.22
+* Fix default `cobcargs`
+
 ## 0.7.22
 * Add COBOL dialects such as `COBOL`, `ACUCOBOL`, `OpenCOBOL`, `GnuCOBOL`, `entcobol`. [Issue #10](https://github.com/OlegKunitsyn/gnucobol-debug/issues/10)
 * Implement `cobcargs` property in `launch.json`. [Issue #10](https://github.com/OlegKunitsyn/gnucobol-debug/issues/10)

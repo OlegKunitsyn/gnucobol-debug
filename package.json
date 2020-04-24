@@ -8,7 +8,7 @@
 		"debugger",
 		"debug"
 	],
-	"version": "0.7.22",
+	"version": "0.8.22",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -86,9 +86,7 @@
 							"cobcargs": {
 								"type": "array",
 								"description": "Extra arguments for cobc",
-								"default": [
-									"-free"
-								]
+								"default": ["-free", "-x"]
 							},
 							"group": {
 								"type": "array",
@@ -117,7 +115,7 @@
 						"cwd": "${workspaceRoot}",
 						"gdbpath": "gdb",
 						"cobcpath": "cobc",
-						"cobcargs": ["-free"],
+						"cobcargs": ["-free", "-x"],
 						"group": []
 					}
 				]
