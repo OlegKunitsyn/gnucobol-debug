@@ -86,7 +86,10 @@
 							"cobcargs": {
 								"type": "array",
 								"description": "Extra arguments for cobc",
-								"default": ["-free", "-x"]
+								"default": [
+									"-free",
+									"-x"
+								]
 							},
 							"group": {
 								"type": "array",
@@ -115,7 +118,10 @@
 						"cwd": "${workspaceRoot}",
 						"gdbpath": "gdb",
 						"cobcpath": "cobc",
-						"cobcargs": ["-free", "-x"],
+						"cobcargs": [
+							"-free",
+							"-x"
+						],
 						"group": []
 					}
 				]

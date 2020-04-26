@@ -60,10 +60,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
 				const args = this.cobcArgs.concat(['-j', target]).concat(group);
-				const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
-				buildProcess.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
-				buildProcess.stdout.on("data", ((data) => { this.log("stdout", data); }).bind(this));
-				buildProcess.on("exit", (() => { this.emit("quit"); }).bind(this));
+				this.process = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
+				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
+				this.process.stdout.on("data", ((data) => { this.log("stdout", data); }).bind(this));
+				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				return;
 			}
 
@@ -163,6 +163,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	stderr(data) {
+		if (this.verbose)
+			this.log("stderr", "stderr: " + data);
 		if (typeof data == "string")
 			this.errbuf += data;
 		else
@@ -176,6 +178,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 			this.logNoNewLine("stderr", this.errbuf);
 			this.errbuf = "";
 		}
+	}
+
+	stdin(data: string) {
+		if (this.verbose)
+			this.log("stderr", "stdin: " + data);
+		this.process.stdin.write(data + "\n");
 	}
 
 	onOutputStderr(lines) {
@@ -202,7 +210,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			} else {
 				const parsed = parseMI(line);
 				if (this.verbose)
-					this.log("log", "GDB -> App: " + JSON.stringify(parsed));
+					this.log("stderr", "GDB -> App: " + JSON.stringify(parsed));
 				let handled = false;
 				if (parsed.token !== undefined) {
 					if (this.handlers[parsed.token]) {
@@ -245,7 +253,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 										this.emit("stopped", parsed);
 									}
 								} else
-									this.log("log", JSON.stringify(parsed));
+									this.log("stderr", JSON.stringify(parsed));
 							} else if (record.type == "notify") {
 								if (record.asyncClass == "thread-created") {
 									this.emit("thread-created", parsed);
@@ -260,13 +268,16 @@ export class MI2 extends EventEmitter implements IDebugger {
 				if (parsed.token == undefined && parsed.resultRecords == undefined && parsed.outOfBandRecord.length == 0)
 					handled = true;
 				if (!handled)
-					this.log("log", "Unhandled: " + JSON.stringify(parsed));
+					this.log("stderr", "Unhandled: " + JSON.stringify(parsed));
 			}
 		});
 	}
 
 	start(): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
+			if (!!this.noDebug) {
+				return;
+			}
 			this.once("ui-break-done", () => {
 				this.sendCommand("exec-run").then((info) => {
 					if (info.resultRecords.resultClass == "running")
@@ -286,7 +297,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
-		this.sendRaw("-gdb-exit");
+		if (!!this.noDebug)
+			return;
+		this.stdin("-gdb-exit");
 	}
 
 	detach() {
@@ -297,7 +310,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
-		this.sendRaw("-target-detach");
+		this.stdin("-target-detach");
 	}
 
 	interrupt(): Thenable<boolean> {
@@ -474,22 +487,22 @@ export class MI2 extends EventEmitter implements IDebugger {
 	async getThreads(): Promise<Thread[]> {
 		if (this.verbose)
 			this.log("stderr", "getThreads");
-		const command = "thread-info";
-		const result = await this.sendCommand(command);
-		const threads = result.result("threads");
-		const ret: Thread[] = [];
-		return threads.map(element => {
-			const ret: Thread = {
-				id: parseInt(MINode.valueOf(element, "id")),
-				targetId: MINode.valueOf(element, "target-id")
-			};
-
-			const name = MINode.valueOf(element, "name");
-			if (name) {
-				ret.name = name;
-			}
-
-			return ret;
+		return new Promise((resolve, reject) => {
+			if (!!this.noDebug)
+				return;
+			this.sendCommand("thread-info").then((result) => {
+				resolve(result.result("threads").map(element => {
+					const ret: Thread = {
+						id: parseInt(MINode.valueOf(element, "id")),
+						targetId: MINode.valueOf(element, "target-id")
+					};
+					const name = MINode.valueOf(element, "name");
+					if (name) {
+						ret.name = name;
+					}
+					return ret;
+				}));
+			}, reject);
 		});
 	}
 
@@ -624,31 +637,18 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	sendUserInput(command: string, threadId: number = 0, frameLevel: number = 0): Thenable<any> {
-		if (command.startsWith("-")) {
-			return this.sendCommand(command.substr(1));
-		} else {
-			return this.sendCliCommand(command, threadId, frameLevel);
-		}
+		return this.sendCliCommand(command, threadId, frameLevel);
 	}
 
-	sendRaw(raw: string) {
-		if (this.verbose)
-			this.log("log", raw);
-		this.process.stdin.write(raw + "\n");
-	}
-
-	async sendCliCommand(command: string, threadId: number = 0, frameLevel: number = 0) {
-		let miCommand = "interpreter-exec ";
-		if (threadId != 0) {
-			miCommand += `--thread ${threadId} --frame ${frameLevel} `;
-		}
-		miCommand += `console "${command.replace(/[\\"']/g, '\\$&')}"`;
-		await this.sendCommand(miCommand);
+	sendCliCommand(command: string, threadId: number = 0, frameLevel: number = 0): Thenable<void> {
+		return new Promise((resolve, reject) => {
+			this.stdin(command);
+		});
 	}
 
 	sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
-		const sel = this.currentToken++;
 		return new Promise((resolve, reject) => {
+			const sel = this.currentToken++;
 			this.handlers[sel] = (node: MINode) => {
 				if (node && node.resultRecords && node.resultRecords.resultClass === "error") {
 					if (suppressFailure) {
@@ -659,7 +659,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				} else
 					resolve(node);
 			};
-			this.sendRaw(sel + "-" + command);
+			this.stdin(sel + "-" + command);
 		});
 	}
 
