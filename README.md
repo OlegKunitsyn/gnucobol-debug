@@ -35,6 +35,7 @@ When your `launch.json` config is set up, you can debug or execute your COBOL pr
             "type": "gdb",
             "request": "launch",
             "target": "${file}",
+            "targetargs": [],
             "cwd": "${workspaceRoot}",
             "gdbpath": "gdb",
             "cobcpath": "cobc",
@@ -68,10 +69,12 @@ Add `verbose` property to your `launch.json` and start debugiing session. In `DE
             "type": "gdb",
             "request": "launch",
             "target": "${file}",
+            "targetargs": [],
             "cwd": "${workspaceRoot}",
             "gdbpath": "gdb",
             "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
+            "group": [],
             "verbose": true
         }
     ]

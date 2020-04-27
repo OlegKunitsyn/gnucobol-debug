@@ -42,6 +42,7 @@ class ExtendedVariable {
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	target: string;
+	targetargs: string[];
 	gdbpath: string;
 	cobcpath: string;
 	cobcargs: string[];
@@ -118,7 +119,7 @@ class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.load(args.cwd, args.target, args.group).then(() => {
+		this.miDebugger.load(args.cwd, args.target, args.targetargs, args.group).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);

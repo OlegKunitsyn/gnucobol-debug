@@ -5,18 +5,16 @@ import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
 import { SourceMap } from "./parser.c";
 
-const nonOutput = /^(?:\d*|undefined)[\*\+\=]|[\~\@\&\^]/;
-const gdbMatch = /(?:\d*|undefined)\(gdb\)/;
+const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
+const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
-function couldBeOutput(line: string) {
-	if (nonOutput.exec(line))
-		return false;
-	return true;
+export function couldBeOutput(line: string) {
+	return !nonOutput.exec(line);
 }
 
 export class MI2 extends EventEmitter implements IDebugger {
@@ -52,14 +50,17 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 	}
 
-	load(cwd: string, target: string, group: string[]): Thenable<any> {
+	load(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
-				const args = this.cobcArgs.concat(['-j', target]).concat(group);
+				const args = this.cobcArgs
+					.concat([target])
+					.concat(group)
+					.concat(['-job=' + targetargs.join(' ')]);
 				this.process = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.stdout.on("data", ((data) => { this.log("stdout", data); }).bind(this));
@@ -98,7 +99,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-				const promises = this.initCommands(target, cwd);
+				const promises = this.initCommands(target, targetargs, cwd);
 				Promise.all(promises).then(() => {
 					this.emit("debug-ready");
 					resolve();
@@ -107,14 +108,15 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	protected initCommands(target: string, cwd: string) {
+	protected initCommands(target: string, targetargs: string[], cwd: string) {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		const cmds = [
-			this.sendCommand("gdb-set target-async on", true),
-			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", true)
+			this.sendCommand("gdb-set target-async on", false),
+			this.sendCommand("gdb-set args " + targetargs.join(' '), false),
+			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
+			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
 		];
-		cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
 		return cmds;
 	}
 
@@ -205,7 +207,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		lines = <string[]>lines.split('\n');
 		lines.forEach(line => {
 			if (couldBeOutput(line)) {
-				if (!gdbMatch.exec(line))
+				if (!gdbRegex.exec(line))
 					this.log("stdout", line);
 			} else {
 				const parsed = parseMI(line);
@@ -249,7 +251,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 										this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
 										this.emit("exited-normally", parsed);
 									} else {
-										this.log("console", "Not implemented stop reason (assuming exception): " + reason);
+										this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
 										this.emit("stopped", parsed);
 									}
 								} else
@@ -299,7 +301,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 		if (!!this.noDebug)
 			return;
-		this.stdin("-gdb-exit");
+		this.sendCommand("gdb-exit");
 	}
 
 	detach() {

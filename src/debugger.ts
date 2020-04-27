@@ -32,7 +32,7 @@ export interface Variable {
 }
 
 export interface IDebugger {
-	load(cwd: string, target: string, group: string[]): Thenable<any>;
+	load(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any>;
 	connect(cwd: string, executable: string, target: string): Thenable<any>;
 	start(): Thenable<boolean>;
 	stop(): void;
