@@ -237,12 +237,23 @@ export class MI2 extends EventEmitter implements IDebugger {
 									const reason = parsed.record("reason");
 									if (this.verbose)
 										this.log("stderr", "stop: " + reason);
-									if (reason == "breakpoint-hit")
+									if (reason == "breakpoint-hit") {
 										this.emit("breakpoint", parsed);
-									else if (reason == "end-stepping-range")
-										this.emit("step-end", parsed);
-									else if (reason == "function-finished")
-										this.emit("step-out-end", parsed);
+									}
+									else if (reason == "end-stepping-range") {
+										if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
+											this.stepInto();
+										} else {
+											this.emit("step-end", parsed);
+										}
+									}
+									else if (reason == "function-finished") {
+										if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
+											this.stepInto();
+										} else {
+											this.emit("step-out-end", parsed);
+										}
+									}
 									else if (reason == "signal-received")
 										this.emit("signal-stop", parsed);
 									else if (reason == "exited-normally")
@@ -325,41 +336,62 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	continue(reverse: boolean = false): Thenable<boolean> {
+	continue(): Thenable<boolean> {
 		if (this.verbose)
 			this.log("stderr", "continue");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-continue" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-continue").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	next(reverse: boolean = false): Thenable<boolean> {
+	/**
+	 * The command executes the line, then pauses at the next line.
+	 * The underlying function executes entirely.
+	 * FIXME: Implement execution graph instead of exec-next fallback
+	 */
+	stepOver(): Thenable<boolean> {
 		if (this.verbose)
-			this.log("stderr", "next");
+			this.log("stderr", "stepOver");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-next" + (reverse ? " --reverse" : "")).then((info) => {
-				resolve(info.resultRecords.resultClass == "running");
-			}, reject);
+			this.sendCommand("stack-info-frame").then((result) => {
+				let map = this.map.getNextStep(result.result('frame.fullname'), parseInt(result.result('frame.line')));
+				if (map !== null) {
+					this.sendCommand('exec-until "' + escape(map.fileC) + ':' + map.lineC + '"').then((info) => {
+						resolve(info.resultRecords.resultClass == "running");
+					}, reject);
+				} else {
+					this.sendCommand("exec-next").then((info) => {
+						resolve(info.resultRecords.resultClass == "running");
+					}, reject);
+				}
+			});
 		});
 	}
 
-	step(reverse: boolean = false): Thenable<boolean> {
+	/**
+	 * The command executes the line, then pauses at the next line.
+	 * The command goes into the underlying function, then pauses at the first line.
+	 */
+	stepInto(): Thenable<boolean> {
 		if (this.verbose)
-			this.log("stderr", "step");
+			this.log("stderr", "stepInto");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-step" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-step").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});
 	}
 
-	stepOut(reverse: boolean = false): Thenable<boolean> {
+	/**
+	 * The comand executes the function, then pauses at the next line outside.
+	 */
+	stepOut(): Thenable<boolean> {
 		if (this.verbose)
 			this.log("stderr", "stepOut");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-finish" + (reverse ? " --reverse" : "")).then((info) => {
+			this.sendCommand("exec-finish").then((info) => {
 				resolve(info.resultRecords.resultClass == "running");
 			}, reject);
 		});

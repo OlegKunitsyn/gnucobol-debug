@@ -1,3 +1,6 @@
+## 0.22.10
+* Implement `Step Over`, `Step Into`, `Step Out` breakpoint-actions
+
 ## 0.22.9
 * Implement `targetargs` property in `launch.json`. [Issue #12](https://github.com/OlegKunitsyn/gnucobol-debug/issues/12)
 * Fix hidden stdout. [Issue #15](https://github.com/OlegKunitsyn/gnucobol-debug/issues/15)

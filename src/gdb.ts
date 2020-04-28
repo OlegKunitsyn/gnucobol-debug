@@ -587,14 +587,6 @@ class GDBDebugSession extends DebugSession {
 		});
 	}
 
-	protected reverseContinueRequest(response: DebugProtocol.ReverseContinueResponse, args: DebugProtocol.ReverseContinueArguments): void {
-		this.miDebugger.continue(true).then(done => {
-			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
-		});
-	}
-
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
 		this.miDebugger.continue().then(done => {
 			this.sendResponse(response);
@@ -603,18 +595,8 @@ class GDBDebugSession extends DebugSession {
 		});
 	}
 
-	protected stepBackRequest(response: DebugProtocol.StepBackResponse, args: DebugProtocol.StepBackArguments): void {
-		this.miDebugger.step(true).then(done => {
-			this.sendResponse(response);
-		}, msg => {
-			this.sendErrorResponse(response, 4, `Could not step back: ${msg} - Try running 'target record-full' before stepping back`);
-		});
-	}
-
 	protected stepInRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.sendErrorResponse(response, 4, 'Not supported yet');
-		return;
-		this.miDebugger.step().then(done => {
+		this.miDebugger.stepInto().then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 4, `Could not step in: ${msg}`);
@@ -622,8 +604,6 @@ class GDBDebugSession extends DebugSession {
 	}
 
 	protected stepOutRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.sendErrorResponse(response, 5, 'Not supported yet');
-		return;
 		this.miDebugger.stepOut().then(done => {
 			this.sendResponse(response);
 		}, msg => {
@@ -632,9 +612,7 @@ class GDBDebugSession extends DebugSession {
 	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this.sendErrorResponse(response, 6, 'Not supported yet');
-		return;
-		this.miDebugger.next().then(done => {
+		this.miDebugger.stepOver().then(done => {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 6, `Could not step over: ${msg}`);

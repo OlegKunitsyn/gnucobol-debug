@@ -39,8 +39,8 @@ export interface IDebugger {
 	detach(): void;
 	interrupt(): Thenable<boolean>;
 	continue(): Thenable<boolean>;
-	next(): Thenable<boolean>;
-	step(): Thenable<boolean>;
+	stepOver(): Thenable<boolean>;
+	stepInto(): Thenable<boolean>;
 	stepOut(): Thenable<boolean>;
 	loadBreakPoints(breakpoints: Breakpoint[]): Thenable<[boolean, Breakpoint][]>;
 	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]>;

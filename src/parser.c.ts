@@ -93,6 +93,12 @@ export class SourceMap {
 		return this.vars.some(e => e.varC === varC);
 	}
 
+	public hasLineCobol(fileC: string, lineC: number): boolean {
+		if (!nativePath.isAbsolute(fileC))
+			fileC = nativePath.join(this.cwd, fileC);
+		return this.lines.some(e => e.fileC === fileC && e.lineC === lineC);
+	}
+
 	public getVarCobol(varC: string): string {
 		return this.vars.find(e => e.varC === varC)?.varCobol;
 	}
@@ -112,6 +118,18 @@ export class SourceMap {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.join(this.cwd, fileC);
 		return this.lines.find(e => e.fileC === fileC && e.lineC === lineC) ?? new Line('', 0, '', 0);
+	}
+
+	public getNextStep(fileC: string, lineC: number): Line {
+		let result = null;
+		const idx = this.lines.findIndex(e => e.fileC === fileC && e.lineC === lineC) + 1;
+		if (idx < this.lines.length) {
+			let line = this.getLineC(this.lines[idx].fileCobol, this.lines[idx].lineCobol);
+			if (line.lineC > 0) {
+				result = line;
+			}
+		}
+		return result;
 	}
 
 	public toString(): string {

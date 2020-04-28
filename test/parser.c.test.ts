@@ -22,6 +22,8 @@ suite("C code parse", () => {
 		assert.equal(cobol, parsed.getLineCobol(c, 105).fileCobol);
 		assert.equal(8, parsed.getLineCobol('hello.c', 105).lineCobol);
 		assert.equal(cobol, parsed.getLineCobol('hello.c', 105).fileCobol);
+		assert.equal(9, parsed.getNextStep(c, 105).lineCobol);
+		assert.equal(cobol, parsed.getLineCobol(c, 105).fileCobol);
 	});
 	test("Compilation Group", () => {
 		const cSample = nativePath.resolve(cwd, 'sample.c');
