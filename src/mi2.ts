@@ -68,7 +68,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				return;
 			}
 
-			const args = this.cobcArgs.concat(['-g', '-d', '-fdebugging-line', '-fsource-location', '-ftraceall', target]).concat(group);
+			const args = this.cobcArgs.concat(['-g', '-fsource-location', '-ftraceall', target]).concat(group);
 			const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 			buildProcess.stderr.on("data", ((err) => { this.emit("launcherror", err); }).bind(this));
 			buildProcess.on('exit', (code) => {
@@ -259,14 +259,18 @@ export class MI2 extends EventEmitter implements IDebugger {
 									else if (reason == "exited-normally")
 										this.emit("exited-normally", parsed);
 									else if (reason == "exited") { // exit with error code != 0
-										this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
+										if (this.verbose)
+											this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
 										this.emit("exited-normally", parsed);
 									} else {
-										this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
+										if (this.verbose)
+											this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
 										this.emit("stopped", parsed);
 									}
-								} else
-									this.log("stderr", JSON.stringify(parsed));
+								} else {
+									if (this.verbose)
+										this.log("stderr", JSON.stringify(parsed));
+								}
 							} else if (record.type == "notify") {
 								if (record.asyncClass == "thread-created") {
 									this.emit("thread-created", parsed);
@@ -280,8 +284,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 				}
 				if (parsed.token == undefined && parsed.resultRecords == undefined && parsed.outOfBandRecord.length == 0)
 					handled = true;
-				if (!handled)
-					this.log("stderr", "Unhandled: " + JSON.stringify(parsed));
+				if (!handled) {
+					if (this.verbose)
+						this.log("stderr", "Unhandled: " + JSON.stringify(parsed));
+				}
 			}
 		});
 	}

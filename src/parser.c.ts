@@ -1,10 +1,10 @@
 import * as readline from "n-readlines";
 import * as nativePath from "path";
 
-const procedureRegex = /\/\*\sLine:\s([0-9]+).*:\s+([0-9a-z_\-\/\.]+)\s+\*\//i;
-const includeRegex = /#include\s+\"([0-9a-z_\-\.]+)\"/i;
+const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
 const varRegex = /static\s+cob_u8_t\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
-const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.]+)\s+\*\//i;
+const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
+const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
 const replaceRegex = /\"/gi;
 
 export class Line {
@@ -73,7 +73,7 @@ export class SourceMap {
 			if (match) {
 				this.vars.push(new Variable(match[2], match[1]));
 			}
-			match = includeRegex.exec(row);
+			match = fileIncludeRegex.exec(row);
 			if (match) {
 				this.parse(match[1]);
 			}
