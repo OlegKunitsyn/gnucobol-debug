@@ -1,3 +1,6 @@
+## 0.22.12
+* Fix `Step Over` in the end of a function call. [Issue #17](https://github.com/OlegKunitsyn/gnucobol-debug/issues/17)
+
 ## 0.22.11
 * Fix source-map creation on the paths with spaces. [Issue #16](https://github.com/OlegKunitsyn/gnucobol-debug/issues/16)
 * Remove default compilation arguments `-d` and `-fdebugging-line`. [Issue #10](https://github.com/OlegKunitsyn/gnucobol-debug/issues/10)
