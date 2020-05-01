@@ -1,3 +1,6 @@
+## 0.22.13
+* Fix `Step Over` in CALL execution. [Issue #21](https://github.com/OlegKunitsyn/gnucobol-debug/issues/21)
+
 ## 0.22.12
 * Fix `Step Over` in the end of a function call. [Issue #17](https://github.com/OlegKunitsyn/gnucobol-debug/issues/17)
 
