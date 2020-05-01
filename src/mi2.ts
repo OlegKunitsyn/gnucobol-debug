@@ -362,16 +362,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 			this.log("stderr", "stepOver");
 		return new Promise((resolve, reject) => {
 			this.sendCommand("stack-info-frame").then((result) => {
-				let map = this.map.getNextStep(result.result('frame.fullname'), parseInt(result.result('frame.line')));
-				if (map !== null) {
-					this.sendCommand('exec-until "' + escape(map.fileC) + ':' + map.lineC + '"').then((info) => {
-						resolve(info.resultRecords.resultClass == "running");
-					}, reject);
-				} else {
-					this.sendCommand("exec-next").then((info) => {
-						resolve(info.resultRecords.resultClass == "running");
-					}, reject);
-				}
+				this.sendCommand("exec-next").then((info) => {
+					resolve(info.resultRecords.resultClass == "running");
+				}, reject);
 			});
 		});
 	}
