@@ -27,6 +27,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private errbuf: string;
 	private process: ChildProcess.ChildProcess;
 	private gdbArgs: string[] = ["-q", "--interpreter=mi2"];
+	private lastStepCommand: Function;
 
 	constructor(public gdbpath: string, public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
@@ -242,14 +243,14 @@ export class MI2 extends EventEmitter implements IDebugger {
 									}
 									else if (reason == "end-stepping-range") {
 										if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
-											this.stepInto();
+											this.lastStepCommand();
 										} else {
 											this.emit("step-end", parsed);
 										}
 									}
 									else if (reason == "function-finished") {
 										if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
-											this.stepInto();
+											this.lastStepCommand();
 										} else {
 											this.emit("step-out-end", parsed);
 										}
@@ -358,14 +359,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 	 * FIXME: Implement execution graph instead of exec-next fallback
 	 */
 	stepOver(): Thenable<boolean> {
+		this.lastStepCommand = this.stepOver;
 		if (this.verbose)
 			this.log("stderr", "stepOver");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("stack-info-frame").then((result) => {
-				this.sendCommand("exec-next").then((info) => {
-					resolve(info.resultRecords.resultClass == "running");
-				}, reject);
-			});
+			this.sendCommand("exec-next").then((info) => {
+				resolve(info.resultRecords.resultClass == "running");
+			}, reject);
 		});
 	}
 
@@ -374,6 +374,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	 * The command goes into the underlying function, then pauses at the first line.
 	 */
 	stepInto(): Thenable<boolean> {
+		this.lastStepCommand = this.stepInto;
 		if (this.verbose)
 			this.log("stderr", "stepInto");
 		return new Promise((resolve, reject) => {
@@ -387,6 +388,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	 * The comand executes the function, then pauses at the next line outside.
 	 */
 	stepOut(): Thenable<boolean> {
+		this.lastStepCommand = this.stepOut;
 		if (this.verbose)
 			this.log("stderr", "stepOut");
 		return new Promise((resolve, reject) => {
