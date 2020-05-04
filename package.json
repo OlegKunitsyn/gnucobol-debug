@@ -17,7 +17,12 @@
 	},
 	"main": "./out/src/extension",
 	"activationEvents": [
-		"onCommand:gnucobol-debug.validateFile"
+		"onLanguage:cobol",
+		"onLanguage:COBOL",
+		"onLanguage:ACUCOBOL",
+		"onLanguage:OpenCOBOL",
+		"onLanguage:GnuCOBOL",
+		"onLanguage:entcobol"
 	],
 	"categories": [
 		"Debuggers"
