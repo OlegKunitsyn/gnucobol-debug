@@ -49,12 +49,13 @@ export class SourceMap {
 	private parse(fileC: string): void {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.resolve(this.cwd, fileC);
-		let line = 0;
+		let lineNumber = 0;
 		let reader = new readline(fileC);
-		let row: string;
+		let row: false | Buffer;
 		let fileCobol: string;
 		while (row = reader.next()) {
-			let match = fileCobolRegex.exec(row);
+			let line = row.toString();
+			let match = fileCobolRegex.exec(line);
 			if (match) {
 				if (!nativePath.isAbsolute(match[1])) {
 					fileCobol = nativePath.resolve(this.cwd, match[1]);
@@ -62,22 +63,22 @@ export class SourceMap {
 					fileCobol = match[1];
 				}
 			}
-			match = procedureRegex.exec(row);
+			match = procedureRegex.exec(line);
 			if (match) {
 				if (this.lines.length > 0 && this.lines[this.lines.length - 1].fileCobol === fileCobol && this.lines[this.lines.length - 1].lineCobol === parseInt(match[1])) {
 					this.lines.pop();
 				}
-				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, line + 2));
+				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
 			}
-			match = varRegex.exec(row);
+			match = varRegex.exec(line);
 			if (match) {
 				this.vars.push(new Variable(match[2], match[1]));
 			}
-			match = fileIncludeRegex.exec(row);
+			match = fileIncludeRegex.exec(line);
 			if (match) {
 				this.parse(match[1]);
 			}
-			line++;
+			lineNumber++;
 		}
 	}
 

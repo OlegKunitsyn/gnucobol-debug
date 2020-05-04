@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
 import * as ChildProcess from "child_process";
+import { GDBDebugSession } from "./gdb";
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-        vscode.debug.registerDebugConfigurationProvider('gdb', new GdbConfigurationProvider())
+        vscode.debug.registerDebugConfigurationProvider('gdb', new GdbConfigurationProvider()),
+        vscode.debug.registerDebugAdapterDescriptorFactory('gdb', new GdbAdapterDescriptorFactory())
     );
 }
 
@@ -16,7 +18,10 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
         }
         return config;
     }
+}
 
-    dispose() {
+class GdbAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    createDebugAdapterDescriptor(_session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+        return new vscode.DebugAdapterInlineImplementation(new GDBDebugSession());
     }
 }

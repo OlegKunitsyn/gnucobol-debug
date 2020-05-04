@@ -187,9 +187,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	stdin(data: string) {
-		if (this.verbose)
-			this.log("stderr", "stdin: " + data);
-		this.process.stdin.write(data + "\n");
+		if (this.isReady()) {
+			if (this.verbose)
+				this.log("stderr", "stdin: " + data);
+			this.process.stdin.write(data + "\n");
+		}
 	}
 
 	onOutputStderr(lines) {
@@ -320,8 +322,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
-		if (!!this.noDebug)
-			return;
 		this.sendCommand("gdb-exit");
 	}
 
@@ -333,7 +333,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
-		this.stdin("-target-detach");
+		this.sendCommand("target-detach");
 	}
 
 	interrupt(): Thenable<boolean> {

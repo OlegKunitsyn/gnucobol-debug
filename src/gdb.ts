@@ -52,7 +52,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	verbose: boolean;
 }
 
-class GDBDebugSession extends DebugSession {
+export class GDBDebugSession extends DebugSession {
 	protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
 	protected variableHandlesReverse: { [id: string]: number } = {};
 	protected useVarObjects: boolean;
@@ -64,10 +64,6 @@ class GDBDebugSession extends DebugSession {
 	protected miDebugger: MI2;
 	protected commandServer: net.Server;
 	protected serverPath: string;
-
-	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
-		super(debuggerLinesStartAt1, isServer);
-	}
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 		this.sendResponse(response);
