@@ -10,10 +10,10 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [c]);
 
 		assert.equal(3, parsed.getLinesCount());
-		assert.equal(1, parsed.getVarsCount());
-		assert.equal('b_6', parsed.getVarC('MYVAR'));
-		assert.equal('b_6', parsed.getVarC('"MYVAR"'));
-		assert.equal('MYVAR', parsed.getVarCobol('b_6'));
+		assert.equal(1, parsed.getDataStoragesCount());
+		assert.equal('b_6', parsed.getDataStorageC('MYVAR'));
+		assert.equal('b_6', parsed.getDataStorageC('"MYVAR"'));
+		assert.equal('MYVAR', parsed.getDataStorageCobol('b_6'));
 		assert.equal(105, parsed.getLineC(cobol, 8).lineC);
 		assert.equal(c, parsed.getLineC(cobol, 8).fileC);
 		assert.equal(105, parsed.getLineC('hello.cbl', 8).lineC);
@@ -32,6 +32,6 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [cSample, cSubSample, cSubSubSample]);
 
 		assert.equal(7, parsed.getLinesCount());
-		assert.equal(7, parsed.getVarsCount());
+		assert.equal(7, parsed.getDataStoragesCount());
 	});
 });

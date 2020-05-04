@@ -2,7 +2,8 @@ import * as readline from "n-readlines";
 import * as nativePath from "path";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const varRegex = /static\s+cob_u8_t\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const dataStorageRegex = /static\s+[0-9a-z_\-]+\s+(b_[0-9]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{[0-9]+\,\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
 const replaceRegex = /\"/gi;
@@ -23,22 +24,39 @@ export class Line {
 	}
 }
 
-export class Variable {
-	varCobol: string;
-	varC: string;
-	constructor(varCobol: string, varC: string) {
-		this.varCobol = varCobol;
-		this.varC = varC;
-	}
+export class DataStorage {
+	constructor(
+		public dataStorageCobol: string,
+		public dataStorageC: string,
+		public vars: Map<string, Field> = new Map<string, Field>()
+	) { }
+
 	public toString(): string {
-		return `${this.varCobol} > ${this.varC}`;
+		let out = `${this.dataStorageCobol} > ${this.dataStorageC}:\n\t`;
+		this.vars.forEach(e => {
+			out += e.toString() + "\n\t";
+		});
+		return out;
+	}
+}
+
+export class Field {
+	constructor(
+		public fieldCobol: string,
+		public fieldC: string
+	) { }
+
+	public toString(): string {
+		return `${this.fieldCobol} > ${this.fieldC}`;
 	}
 }
 
 export class SourceMap {
 	private cwd: string;
 	private lines: Line[] = new Array<Line>();
-	private vars: Variable[] = new Array<Variable>();
+	private dataStoragesByC: Map<string, DataStorage> = new Map<string, DataStorage>();
+	private dataStoragesByCobol: Map<string, DataStorage> = new Map<string, DataStorage>();
+
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
 		filesCobol.forEach(e => {
@@ -69,9 +87,17 @@ export class SourceMap {
 				}
 				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, line + 2));
 			}
-			match = varRegex.exec(row);
+			match = dataStorageRegex.exec(row);
 			if (match) {
-				this.vars.push(new Variable(match[2], match[1]));
+				const dataStorage = new DataStorage(match[2], match[1]);
+				this.dataStoragesByC.set(match[1], dataStorage);
+				this.dataStoragesByCobol.set(match[2], dataStorage);
+			}
+			match = fieldRegex.exec(row);
+			if (match) {
+				const dataStorage = this.dataStoragesByC.get(match[2]);
+				if (dataStorage.dataStorageCobol !== match[3])
+					dataStorage.vars.set(match[1], new Field(match[3], match[1]));
 			}
 			match = fileIncludeRegex.exec(row);
 			if (match) {
@@ -85,12 +111,12 @@ export class SourceMap {
 		return this.lines.length;
 	}
 
-	public getVarsCount(): number {
-		return this.vars.length;
+	public getDataStoragesCount(): number {
+		return this.dataStoragesByC.size;
 	}
 
-	public hasVarCobol(varC: string): boolean {
-		return this.vars.some(e => e.varC === varC);
+	public hasDataStorageCobol(dataStorageC: string): boolean {
+		return this.dataStoragesByC.has(dataStorageC);
 	}
 
 	public hasLineCobol(fileC: string, lineC: number): boolean {
@@ -99,13 +125,13 @@ export class SourceMap {
 		return this.lines.some(e => e.fileC === fileC && e.lineC === lineC);
 	}
 
-	public getVarCobol(varC: string): string {
-		return this.vars.find(e => e.varC === varC)?.varCobol;
+	public getDataStorageCobol(dataStorageC: string): string {
+		return this.dataStoragesByC.get(dataStorageC)?.dataStorageCobol;
 	}
 
-	public getVarC(varCobol: string): string {
-		varCobol = varCobol.replace(replaceRegex, '');
-		return this.vars.find(e => e.varCobol === varCobol)?.varC;
+	public getDataStorageC(dataStorageCobol: string): string {
+		dataStorageCobol = dataStorageCobol.replace(replaceRegex, '');
+		return this.dataStoragesByCobol.get(dataStorageCobol)?.dataStorageC;
 	}
 
 	public getLineC(fileCobol: string, lineCobol: number): Line {
@@ -137,7 +163,7 @@ export class SourceMap {
 		this.lines.forEach(e => {
 			out += e.toString() + "\n";
 		});
-		this.vars.forEach(e => {
+		this.dataStoragesByC.forEach(e => {
 			out += e.toString() + "\n";
 		});
 		return out;

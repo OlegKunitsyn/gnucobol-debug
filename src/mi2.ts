@@ -87,7 +87,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				this.map = new SourceMap(cwd, [target].concat(group));
 
 				if (this.verbose) {
-					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getVarsCount()}`);
+					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getDataStoragesCount()}`);
 					this.log("stderr", this.map.toString());
 				}
 
@@ -588,7 +588,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
-		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --all-values`);
 		const variables = result.result("variables");
 		const ret: Variable[] = [];
 		for (let element of variables) {
@@ -596,12 +596,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			if (!this.map.hasVarCobol(key)) {
+			if (!this.map.hasDataStorageCobol(key)) {
 				continue;
 			}
 
 			ret.push({
-				name: this.map.getVarCobol(key),
+				name: this.map.getDataStorageCobol(key),
 				valueStr: value,
 				type: type,
 				raw: element
@@ -627,7 +627,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (thread != 0) {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
-		command += this.map.getVarC(name);
+		command += this.map.getDataStorageC(name);
 
 		return this.sendCommand(command);
 	}
