@@ -590,21 +590,33 @@ export class MI2 extends EventEmitter implements IDebugger {
 			this.log("stderr", "getStackVariables");
 		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --all-values`);
 		const variables = result.result("variables");
-		const ret: Variable[] = [];
+
 		for (let element of variables) {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			if (!this.map.hasDataStorageCobol(key)) {
-				continue;
-			}
+			const cobolVariable = this.map.getCobolVariable(key);
 
+			if (cobolVariable !== null) {
+				cobolVariable.setType(type);
+				cobolVariable.setValue(value);
+				cobolVariable.setRaw(element);
+			}
+		}
+
+		let iterator = this.map.getFields();
+		if (this.cobcver === "2") {
+			iterator = this.map.getDataStorages();
+		}
+
+		const ret: Variable[] = [];
+		for (let cobolVariable of iterator) {
 			ret.push({
-				name: this.map.getDataStorageCobol(key),
-				valueStr: value,
-				type: type,
-				raw: element
+				name: cobolVariable.getName(),
+				valueStr: cobolVariable.getValue(),
+				type: cobolVariable.getType(),
+				raw: cobolVariable.getRaw()
 			});
 		}
 		return ret;
