@@ -28,7 +28,8 @@ export interface CobolVariable {
 	setType(value: string): void;
 	setValue(type: string): void;
 	setRaw(raw: any): void;
-	getName(): string;
+	getCobolName(): string;
+	getCName(): string;
 	getType(): string;
 	getValue(): string;
 	getRaw(): any;
@@ -58,8 +59,12 @@ export class DataStorage implements CobolVariable {
 		this.raw = raw;
 	}
 
-	getName(): string {
+	getCobolName(): string {
 		return this.dataStorageCobol;
+	}
+
+	getCName(): string {
+		return this.dataStorageC;
 	}
 
 	getType(): string {
@@ -106,8 +111,12 @@ export class Field implements CobolVariable {
 		this.raw = raw;
 	}
 
-	getName(): string {
+	getCobolName(): string {
 		return this.fieldCobol;
+	}
+
+	getCName(): string {
+		return this.fieldC;
 	}
 
 	getType(): string {
@@ -133,6 +142,7 @@ export class SourceMap {
 	private dataStoragesByC: Map<string, DataStorage> = new Map<string, DataStorage>();
 	private dataStoragesByCobol: Map<string, DataStorage> = new Map<string, DataStorage>();
 	private fieldsByC: Map<string, Field> = new Map<string, Field>();
+	private fieldsByCobol: Map<string, Field> = new Map<string, Field>();
 
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
@@ -177,6 +187,7 @@ export class SourceMap {
 					const field = new Field(match[3], match[1]);
 					dataStorage.vars.set(match[1], field);
 					this.fieldsByC.set(field.fieldC, field);
+					this.fieldsByCobol.set(field.fieldCobol, field);
 				}
 			}
 			match = fileIncludeRegex.exec(row);
@@ -203,12 +214,22 @@ export class SourceMap {
 		return this.fieldsByC.values();
 	}
 
-	public getCobolVariable(varC: string): CobolVariable {
+	public getCobolVariableByC(varC: string): CobolVariable {
 		if(this.dataStoragesByC.has(varC)) {
 			return this.dataStoragesByC.get(varC);
 		}
 		if(this.fieldsByC.has(varC)) {
 			return this.fieldsByC.get(varC);
+		}
+		return null;
+	}
+
+	public getCobolVariableByCobol(varCobol: string): CobolVariable {
+		if(this.dataStoragesByCobol.has(varCobol)) {
+			return this.dataStoragesByCobol.get(varCobol);
+		}
+		if(this.fieldsByCobol.has(varCobol)) {
+			return this.fieldsByCobol.get(varCobol);
 		}
 		return null;
 	}

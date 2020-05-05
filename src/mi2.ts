@@ -596,7 +596,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			const cobolVariable = this.map.getCobolVariable(key);
+			const cobolVariable = this.map.getCobolVariableByC(key);
 
 			if (cobolVariable !== null) {
 				cobolVariable.setType(type);
@@ -613,7 +613,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		const ret: Variable[] = [];
 		for (let cobolVariable of iterator) {
 			ret.push({
-				name: cobolVariable.getName(),
+				name: cobolVariable.getCobolName(),
 				valueStr: cobolVariable.getValue(),
 				type: cobolVariable.getType(),
 				raw: cobolVariable.getRaw()
@@ -639,7 +639,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (thread != 0) {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
-		command += this.map.getDataStorageC(name);
+
+		command += this.map.getCobolVariableByCobol(name).getCName();
 
 		return this.sendCommand(command);
 	}
