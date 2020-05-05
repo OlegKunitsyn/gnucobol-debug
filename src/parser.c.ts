@@ -24,12 +24,55 @@ export class Line {
 	}
 }
 
-export class DataStorage {
+export interface CobolVariable {
+	setType(value: string): void;
+	setValue(type: string): void;
+	setRaw(raw: any): void;
+	getName(): string;
+	getType(): string;
+	getValue(): string;
+	getRaw(): any;
+}
+
+export class DataStorage implements CobolVariable {
+	
+	private type: string;
+	private value: string;
+	private raw: any;
+
 	constructor(
 		public dataStorageCobol: string,
 		public dataStorageC: string,
 		public vars: Map<string, Field> = new Map<string, Field>()
 	) { }
+
+	setType(type: string): void {
+		this.type = type;
+	}
+
+	setValue(value: string): void {
+		this.value = value;
+	}
+
+	setRaw(raw: any): void {
+		this.raw = raw;
+	}
+
+	getName(): string {
+		return this.dataStorageCobol;
+	}
+
+	getType(): string {
+		return this.type;
+	}
+
+	getValue(): string {
+		return this.value;
+	}
+
+	getRaw(): any {
+		return this.raw;
+	}
 
 	public toString(): string {
 		let out = `${this.dataStorageCobol} > ${this.dataStorageC}:\n\t`;
@@ -40,11 +83,44 @@ export class DataStorage {
 	}
 }
 
-export class Field {
+export class Field implements CobolVariable {
+	
+	private type: string;
+	private value: string;
+	private raw: any;
+
 	constructor(
 		public fieldCobol: string,
 		public fieldC: string
 	) { }
+
+	setType(type: string): void {
+		this.type = type;
+	}
+
+	setValue(value: string): void {
+		this.value = value;
+	}
+
+	setRaw(raw: any): void {
+		this.raw = raw;
+	}
+
+	getName(): string {
+		return this.fieldCobol;
+	}
+
+	getType(): string {
+		return this.type;
+	}
+
+	getValue(): string {
+		return this.value;
+	}
+
+	getRaw(): any {
+		return this.raw;
+	}
 
 	public toString(): string {
 		return `${this.fieldCobol} > ${this.fieldC}`;
@@ -56,6 +132,7 @@ export class SourceMap {
 	private lines: Line[] = new Array<Line>();
 	private dataStoragesByC: Map<string, DataStorage> = new Map<string, DataStorage>();
 	private dataStoragesByCobol: Map<string, DataStorage> = new Map<string, DataStorage>();
+	private fieldsByC: Map<string, Field> = new Map<string, Field>();
 
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
@@ -96,8 +173,11 @@ export class SourceMap {
 			match = fieldRegex.exec(row);
 			if (match) {
 				const dataStorage = this.dataStoragesByC.get(match[2]);
-				if (dataStorage.dataStorageCobol !== match[3])
-					dataStorage.vars.set(match[1], new Field(match[3], match[1]));
+				if (dataStorage.dataStorageCobol !== match[3]) {
+					const field = new Field(match[3], match[1]);
+					dataStorage.vars.set(match[1], field);
+					this.fieldsByC.set(field.fieldC, field);
+				}
 			}
 			match = fileIncludeRegex.exec(row);
 			if (match) {
@@ -113,6 +193,24 @@ export class SourceMap {
 
 	public getDataStoragesCount(): number {
 		return this.dataStoragesByC.size;
+	}
+
+	public getDataStorages(): IterableIterator<CobolVariable> {
+		return this.dataStoragesByC.values();
+	}
+
+	public getFields(): IterableIterator<CobolVariable> {
+		return this.fieldsByC.values();
+	}
+
+	public getCobolVariable(varC: string): CobolVariable {
+		if(this.dataStoragesByC.has(varC)) {
+			return this.dataStoragesByC.get(varC);
+		}
+		if(this.fieldsByC.has(varC)) {
+			return this.fieldsByC.get(varC);
+		}
+		return null;
 	}
 
 	public hasDataStorageCobol(dataStorageC: string): boolean {
