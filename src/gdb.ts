@@ -45,7 +45,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	targetargs: string[];
 	gdbpath: string;
 	cobcpath: string;
-	cobcver: string;
+	cobcver: number;
 	cobcargs: string[];
 	env: any;
 	group: string[];

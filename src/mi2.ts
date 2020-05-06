@@ -29,7 +29,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private gdbArgs: string[] = ["-q", "--interpreter=mi2"];
 	private lastStepCommand: Function;
 
-	constructor(public gdbpath: string, public cobcpath: string, public cobcver: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
+	constructor(public gdbpath: string, public cobcpath: string, public cobcver: number, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
 		if (procEnv) {
 			const env = {};

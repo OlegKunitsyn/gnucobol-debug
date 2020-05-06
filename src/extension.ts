@@ -14,7 +14,7 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
         const stdout = ChildProcess.spawnSync(config.cobcpath, ['-v'], { cwd: config.wd, env: config.procEnv }).stdout.toString();
         const match = /cobc\s\(GnuCOBOL\)\s([0-9]+)\.([0-9]+)\.[0-9]+/ig.exec(stdout);
         if (match) {
-            config.cobcver = match[1] + match[2];
+            config.cobcver = parseInt(match[1]);
         }
         return config;
     }
