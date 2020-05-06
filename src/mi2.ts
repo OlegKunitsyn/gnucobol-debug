@@ -84,7 +84,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 				if (this.verbose)
 					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
 
-				this.map = new SourceMap(cwd, [target].concat(group));
+					try {
+						this.map = new SourceMap(cwd, [target].concat(group));
+					} catch(e) {
+						this.log('stderr', e);
+					}
 
 				if (this.verbose) {
 					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getDataStoragesCount()}`);
@@ -588,7 +592,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
-		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --all-values`);
+		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
 		const variables = result.result("variables");
 
 		for (let element of variables) {
@@ -605,13 +609,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 			}
 		}
 
-		let iterator = this.map.getFields();
-		if (this.cobcver === "2") {
-			iterator = this.map.getDataStorages();
-		}
-
 		const ret: Variable[] = [];
-		for (let cobolVariable of iterator) {
+		for (let cobolVariable of this.map.getDataStorages()) {
 			ret.push({
 				name: cobolVariable.getCobolName(),
 				valueStr: cobolVariable.getValue(),
@@ -640,7 +639,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		command += this.map.getCobolVariableByCobol(name).getCName();
+		const cleanedName = name.substring(1, name.length - 1);
+		command += this.map.getCobolVariableByCobol(cleanedName).getCName();
 
 		return this.sendCommand(command);
 	}

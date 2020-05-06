@@ -2,7 +2,7 @@ import * as readline from "n-readlines";
 import * as nativePath from "path";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const dataStorageRegex = /static\s+[0-9a-z_\-]+\s+(b_[0-9]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{[0-9]+\,\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
