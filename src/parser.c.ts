@@ -175,19 +175,19 @@ export class SourceMap {
 				}
 				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
 			}
-			match = dataStorageRegex.exec(row);
+			match = dataStorageRegex.exec(line);
 			if (match) {
 				const dataStorage = new DataStorage(match[2], match[1]);
 				this.dataStoragesByC.set(match[1], dataStorage);
 				this.dataStoragesByCobol.set(match[2], dataStorage);
 			}
-			match = fieldRegex.exec(row);
+			match = fieldRegex.exec(line);
 			if (match) {
 				const dataStorage = this.dataStoragesByC.get(match[2]);
-        const field = new Field(match[3], match[1]);
-        dataStorage.vars.set(match[1], field);
-        this.fieldsByC.set(field.fieldC, field);
-        this.fieldsByCobol.set(field.fieldCobol, field);
+				const field = new Field(match[3], match[1]);
+				dataStorage.vars.set(match[1], field);
+				this.fieldsByC.set(field.fieldC, field);
+				this.fieldsByCobol.set(field.fieldCobol, field);
 			}
 			match = fileIncludeRegex.exec(line);
 			if (match) {
