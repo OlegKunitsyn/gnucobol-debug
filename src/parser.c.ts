@@ -3,7 +3,7 @@ import * as nativePath from "path";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
 const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
-const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{[0-9]+\,\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
 const replaceRegex = /\"/gi;
@@ -154,12 +154,13 @@ export class SourceMap {
 	private parse(fileC: string): void {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.resolve(this.cwd, fileC);
-		let line = 0;
+		let lineNumber = 0;
 		let reader = new readline(fileC);
-		let row: string;
+		let row: false | Buffer;
 		let fileCobol: string;
 		while (row = reader.next()) {
-			let match = fileCobolRegex.exec(row);
+			let line = row.toString();
+			let match = fileCobolRegex.exec(line);
 			if (match) {
 				if (!nativePath.isAbsolute(match[1])) {
 					fileCobol = nativePath.resolve(this.cwd, match[1]);
@@ -167,12 +168,12 @@ export class SourceMap {
 					fileCobol = match[1];
 				}
 			}
-			match = procedureRegex.exec(row);
+			match = procedureRegex.exec(line);
 			if (match) {
 				if (this.lines.length > 0 && this.lines[this.lines.length - 1].fileCobol === fileCobol && this.lines[this.lines.length - 1].lineCobol === parseInt(match[1])) {
 					this.lines.pop();
 				}
-				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, line + 2));
+				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
 			}
 			match = dataStorageRegex.exec(row);
 			if (match) {
@@ -183,18 +184,16 @@ export class SourceMap {
 			match = fieldRegex.exec(row);
 			if (match) {
 				const dataStorage = this.dataStoragesByC.get(match[2]);
-				if (dataStorage.dataStorageCobol !== match[3]) {
-					const field = new Field(match[3], match[1]);
-					dataStorage.vars.set(match[1], field);
-					this.fieldsByC.set(field.fieldC, field);
-					this.fieldsByCobol.set(field.fieldCobol, field);
-				}
+        const field = new Field(match[3], match[1]);
+        dataStorage.vars.set(match[1], field);
+        this.fieldsByC.set(field.fieldC, field);
+        this.fieldsByCobol.set(field.fieldCobol, field);
 			}
-			match = fileIncludeRegex.exec(row);
+			match = fileIncludeRegex.exec(line);
 			if (match) {
 				this.parse(match[1]);
 			}
-			line++;
+			lineNumber++;
 		}
 	}
 
