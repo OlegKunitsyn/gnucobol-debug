@@ -12,14 +12,14 @@ import {
 	Thread,
 	ThreadEvent
 } from 'vscode-debugadapter';
-import {DebugProtocol} from 'vscode-debugprotocol';
+import { DebugProtocol } from 'vscode-debugprotocol';
 import * as systemPath from "path";
 import * as net from "net";
 import * as os from "os";
 import * as fs from "fs";
-import {MIError, Variable, VariableObject} from './debugger';
-import {MINode} from './parser.mi2';
-import {MI2} from './mi2';
+import { MIError, Variable, VariableObject } from './debugger';
+import { MINode } from './parser.mi2';
+import { MI2 } from './mi2';
 
 const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*|\[\d+\])\s*=\s*/;
 const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
@@ -69,7 +69,7 @@ export class GDBDebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
-	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {		
+	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 		this.miDebugger = new MI2(args.gdbpath, args.cobcpath, args.cobcver, args.cobcargs, args.env, args.verbose, args.noDebug);
 		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
@@ -412,9 +412,9 @@ export class GDBDebugSession extends DebugSession {
 								varObj = this.variableHandles.get(varId) as any;
 							} catch (err) {
 								if (err instanceof MIError && err.message == "Variable object not found") {
-									varObj = await this.miDebugger.varCreate(variable.name, varObjName);
+									varObj = await this.miDebugger.varCreate(variable.getCobolName(), varObjName);
 									const varId = findOrCreateVariable(varObj);
-									varObj.exp = variable.name;
+									varObj.exp = variable.getCobolName();
 									varObj.id = varId;
 								} else {
 									throw err;
@@ -429,8 +429,8 @@ export class GDBDebugSession extends DebugSession {
 							});
 						}
 					} else {
-						if (variable.valueStr !== undefined) {
-							let expanded = expandValue(createVariable, `{${variable.name}=${variable.valueStr})`, "", variable.raw);
+						if (variable.getValue() !== undefined) {
+							let expanded = expandValue(createVariable, `{${variable.getCobolName()}=${variable.getValue()}}`, "", variable.getRaw());
 							if (expanded) {
 								if (typeof expanded[0] == "string")
 									expanded = [
@@ -442,15 +442,17 @@ export class GDBDebugSession extends DebugSession {
 									];
 								variables.push(expanded[0]);
 							}
-						} else
+						} else {
 							variables.push({
-								name: variable.name,
-								type: variable.type,
-								value: variable.type,
-								variablesReference: createVariable(variable.name)
+								name: variable.getCobolName(),
+								type: variable.getType(),
+								value: variable.getType(),
+								variablesReference: createVariable(variable.getCobolName())
 							});
+						}
 					}
 				}
+				
 				response.body = {
 					variables: variables
 				};
@@ -460,12 +462,12 @@ export class GDBDebugSession extends DebugSession {
 			}
 		} else if (typeof id == "string") {
 			// Variable members
-			let variable;
+			let variable: Variable;
 			try {
 				// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
-				variable = await this.miDebugger.evalExpression(JSON.stringify(id), 0, 0);
+				variable = await this.miDebugger.evalExpression(id, 0, 0);
 				try {
-					let expanded = expandValue(createVariable, variable.result("value"), id, variable);
+					let expanded = expandValue(createVariable, variable.getValue(), id, variable);
 					if (!expanded) {
 						this.sendErrorResponse(response, 2, `Could not expand variable`);
 					} else {
@@ -520,9 +522,9 @@ export class GDBDebugSession extends DebugSession {
 					};
 					const addOne = async () => {
 						// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
-						const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`), 0, 0);
+						const variable = await this.miDebugger.evalExpression(`${varReq.name}+${arrIndex})`, 0, 0);
 						try {
-							const expanded = expandValue(createVariable, variable.result("value"), varReq.name, variable);
+							const expanded = expandValue(createVariable, variable.getValue(), varReq.name, variable);
 							if (!expanded) {
 								this.sendErrorResponse(response, 15, `Could not expand variable`);
 							} else {
@@ -622,7 +624,7 @@ export class GDBDebugSession extends DebugSession {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
-					result: res.result("value")
+					result: res.getValue()
 				};
 				this.sendResponse(response);
 			}, msg => {

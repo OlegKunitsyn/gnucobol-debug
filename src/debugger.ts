@@ -25,10 +25,14 @@ export interface Stack {
 }
 
 export interface Variable {
-	name: string;
-	valueStr: string;
-	type: string;
-	raw?: any;
+	setType(value: string): void;
+	setValue(type: string): void;
+	setRaw(raw: any): void;
+	getCobolName(): string;
+	getCName(): string;
+	getType(): string;
+	getValue(): string;
+	getRaw(): any;
 }
 
 export interface IDebugger {

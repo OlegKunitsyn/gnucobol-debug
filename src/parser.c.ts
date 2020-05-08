@@ -1,5 +1,6 @@
 import * as readline from "n-readlines";
 import * as nativePath from "path";
+import { Variable } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
 const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
@@ -24,19 +25,7 @@ export class Line {
 	}
 }
 
-export interface CobolVariable {
-	setType(value: string): void;
-	setValue(type: string): void;
-	setRaw(raw: any): void;
-	getCobolName(): string;
-	getCName(): string;
-	getType(): string;
-	getValue(): string;
-	getRaw(): any;
-}
-
-export class DataStorage implements CobolVariable {
-	
+export class DataStorage implements Variable {
 	private type: string;
 	private value: string;
 	private raw: any;
@@ -88,8 +77,8 @@ export class DataStorage implements CobolVariable {
 	}
 }
 
-export class Field implements CobolVariable {
-	
+export class Field implements Variable {
+
 	private type: string;
 	private value: string;
 	private raw: any;
@@ -183,11 +172,14 @@ export class SourceMap {
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
+				//TODO - Add placeholder for fields without data storages or simply ignore them.
 				const dataStorage = this.dataStoragesByC.get(match[2]);
-				const field = new Field(match[3], match[1]);
-				dataStorage.vars.set(match[1], field);
-				this.fieldsByC.set(field.fieldC, field);
-				this.fieldsByCobol.set(field.fieldCobol, field);
+				if (dataStorage !== undefined) {
+					const field = new Field(match[3], match[1]);
+					dataStorage.vars.set(match[1], field);
+					this.fieldsByC.set(field.fieldC, field);
+					this.fieldsByCobol.set(field.fieldCobol, field);
+				}
 			}
 			match = fileIncludeRegex.exec(line);
 			if (match) {
@@ -205,29 +197,37 @@ export class SourceMap {
 		return this.dataStoragesByC.size;
 	}
 
-	public getDataStorages(): IterableIterator<CobolVariable> {
-		return this.dataStoragesByC.values();
+	public getDataStorages(): Variable[] {
+		const ret: Variable[] = [];
+		for (let cobolVariable of this.dataStoragesByC.values()) {
+			ret.push(cobolVariable);
+		}
+		return ret;
 	}
 
-	public getFields(): IterableIterator<CobolVariable> {
-		return this.fieldsByC.values();
+	public getFields(): Variable[] {
+		const ret: Variable[] = [];
+		for (let cobolVariable of this.fieldsByC.values()) {
+			ret.push(cobolVariable);
+		}
+		return ret;
 	}
 
-	public getCobolVariableByC(varC: string): CobolVariable {
-		if(this.dataStoragesByC.has(varC)) {
+	public getCobolVariableByC(varC: string): Variable {
+		if (this.dataStoragesByC.has(varC)) {
 			return this.dataStoragesByC.get(varC);
 		}
-		if(this.fieldsByC.has(varC)) {
+		if (this.fieldsByC.has(varC)) {
 			return this.fieldsByC.get(varC);
 		}
 		return null;
 	}
 
-	public getCobolVariableByCobol(varCobol: string): CobolVariable {
-		if(this.dataStoragesByCobol.has(varCobol)) {
+	public getCobolVariableByCobol(varCobol: string): Variable {
+		if (this.dataStoragesByCobol.has(varCobol)) {
 			return this.dataStoragesByCobol.get(varCobol);
 		}
-		if(this.fieldsByCobol.has(varCobol)) {
+		if (this.fieldsByCobol.has(varCobol)) {
 			return this.fieldsByCobol.get(varCobol);
 		}
 		return null;

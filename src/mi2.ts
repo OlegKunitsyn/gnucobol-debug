@@ -8,6 +8,7 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
+const dataValueRegex = /.*size\s\=\s(\d+).*?\>(.*),\sattr.*/i;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -592,7 +593,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
-		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --all-values`);
 		const variables = result.result("variables");
 
 		for (let element of variables) {
@@ -609,16 +610,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			}
 		}
 
-		const ret: Variable[] = [];
-		for (let cobolVariable of this.map.getDataStorages()) {
-			ret.push({
-				name: cobolVariable.getCobolName(),
-				valueStr: cobolVariable.getValue(),
-				type: cobolVariable.getType(),
-				raw: cobolVariable.getRaw()
-			});
-		}
-		return ret;
+		return this.map.getFields();
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
@@ -631,7 +623,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async evalExpression(name: string, thread: number, frame: number): Promise<MINode> {
+	async evalExpression(name: string, thread: number, frame: number): Promise<Variable> {
 		if (this.verbose)
 			this.log("stderr", "evalExpression");
 		let command = "data-evaluate-expression ";
@@ -639,10 +631,31 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		const cleanedName = name.substring(1, name.length - 1);
-		command += this.map.getCobolVariableByCobol(cleanedName).getCName();
+		let cleanedName = name;
+		if(name.startsWith("*")) {
+			cleanedName = name.substring(1, name.indexOf("."));
+		}
 
-		return this.sendCommand(command);
+		const variable = this.map.getCobolVariableByCobol(cleanedName);
+
+		command += variable.getCName();
+
+		const response = await this.sendCommand(command);
+		const element = response.resultRecords.results;
+
+		let value = MINode.valueOf(element, "value");
+
+		if(value.startsWith("{")) {
+			const match = dataValueRegex.exec(value);
+			const size = parseInt(match[1]);
+			value = match[2].substring(0, size).trim();
+		}
+
+		variable.setValue(value);
+		variable.setRaw(element);
+		
+
+		return variable;
 	}
 
 	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {
