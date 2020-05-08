@@ -8,7 +8,7 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
-const dataValueRegex = /.*size\s\=\s(\d+).*?\>(.*),\sattr.*/i;
+const dataValueRegex = /.*size\s\=\s(\d+).*?\>\s(.*),\sattr.*/i;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -648,7 +648,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if(value.startsWith("{")) {
 			const match = dataValueRegex.exec(value);
 			const size = parseInt(match[1]);
-			value = match[2].substring(0, size).trim();
+			value = match[2];
+			if(value.startsWith("\"")) {
+				value = `"${value.substring(1, size + 1)}"`;
+			} else if(value.startsWith("'")) {
+				value = `"${value.substring(0,3)} repeats ${size} times"`;
+			}
 		}
 
 		variable.setValue(value);

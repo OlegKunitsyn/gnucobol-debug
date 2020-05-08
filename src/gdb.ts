@@ -397,7 +397,7 @@ export class GDBDebugSession extends DebugSession {
 				for (const variable of stack) {
 					if (this.useVarObjects) {
 						try {
-							const varObjName = `var_${id}_${variable.name}`;
+							const varObjName = `var_${id}_${variable.getCobolName()}`;
 							let varObj: VariableObject;
 							try {
 								const changes = await this.miDebugger.varUpdate(varObjName);
@@ -423,7 +423,7 @@ export class GDBDebugSession extends DebugSession {
 							variables.push(varObj.toProtocolVariable());
 						} catch (err) {
 							variables.push({
-								name: variable.name,
+								name: variable.getCobolName(),
 								value: `<${err}>`,
 								variablesReference: 0
 							});
