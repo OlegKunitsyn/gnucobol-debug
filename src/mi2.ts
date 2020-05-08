@@ -84,10 +84,14 @@ export class MI2 extends EventEmitter implements IDebugger {
 				if (this.verbose)
 					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
 
-				this.map = new SourceMap(cwd, [target].concat(group));
+					try {
+						this.map = new SourceMap(cwd, [target].concat(group));
+					} catch(e) {
+						this.log('stderr', e);
+					}
 
 				if (this.verbose) {
-					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getVarsCount()}`);
+					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getDataStoragesCount()}`);
 					this.log("stderr", this.map.toString());
 				}
 
@@ -590,21 +594,28 @@ export class MI2 extends EventEmitter implements IDebugger {
 			this.log("stderr", "getStackVariables");
 		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
 		const variables = result.result("variables");
-		const ret: Variable[] = [];
+
 		for (let element of variables) {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			if (!this.map.hasVarCobol(key)) {
-				continue;
-			}
+			const cobolVariable = this.map.getCobolVariableByC(key);
 
+			if (cobolVariable !== null) {
+				cobolVariable.setType(type);
+				cobolVariable.setValue(value);
+				cobolVariable.setRaw(element);
+			}
+		}
+
+		const ret: Variable[] = [];
+		for (let cobolVariable of this.map.getDataStorages()) {
 			ret.push({
-				name: this.map.getVarCobol(key),
-				valueStr: value,
-				type: type,
-				raw: element
+				name: cobolVariable.getCobolName(),
+				valueStr: cobolVariable.getValue(),
+				type: cobolVariable.getType(),
+				raw: cobolVariable.getRaw()
 			});
 		}
 		return ret;
@@ -627,7 +638,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (thread != 0) {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
-		command += this.map.getVarC(name);
+
+		const cleanedName = name.substring(1, name.length - 1);
+		command += this.map.getCobolVariableByCobol(cleanedName).getCName();
 
 		return this.sendCommand(command);
 	}

@@ -2,8 +2,8 @@ import * as readline from "n-readlines";
 import * as nativePath from "path";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const varRegex = /static\s+cob_u8_t\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
-const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{[0-9]+\,\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
 const replaceRegex = /\"/gi;
@@ -24,22 +24,126 @@ export class Line {
 	}
 }
 
-export class Variable {
-	varCobol: string;
-	varC: string;
-	constructor(varCobol: string, varC: string) {
-		this.varCobol = varCobol;
-		this.varC = varC;
+export interface CobolVariable {
+	setType(value: string): void;
+	setValue(type: string): void;
+	setRaw(raw: any): void;
+	getCobolName(): string;
+	getCName(): string;
+	getType(): string;
+	getValue(): string;
+	getRaw(): any;
+}
+
+export class DataStorage implements CobolVariable {
+	
+	private type: string;
+	private value: string;
+	private raw: any;
+
+	constructor(
+		public dataStorageCobol: string,
+		public dataStorageC: string,
+		public vars: Map<string, Field> = new Map<string, Field>()
+	) { }
+
+	setType(type: string): void {
+		this.type = type;
 	}
+
+	setValue(value: string): void {
+		this.value = value;
+	}
+
+	setRaw(raw: any): void {
+		this.raw = raw;
+	}
+
+	getCobolName(): string {
+		return this.dataStorageCobol;
+	}
+
+	getCName(): string {
+		return this.dataStorageC;
+	}
+
+	getType(): string {
+		return this.type;
+	}
+
+	getValue(): string {
+		return this.value;
+	}
+
+	getRaw(): any {
+		return this.raw;
+	}
+
 	public toString(): string {
-		return `${this.varCobol} > ${this.varC}`;
+		let out = `${this.dataStorageCobol} > ${this.dataStorageC}:\n\t`;
+		this.vars.forEach(e => {
+			out += e.toString() + "\n\t";
+		});
+		return out;
+	}
+}
+
+export class Field implements CobolVariable {
+	
+	private type: string;
+	private value: string;
+	private raw: any;
+
+	constructor(
+		public fieldCobol: string,
+		public fieldC: string
+	) { }
+
+	setType(type: string): void {
+		this.type = type;
+	}
+
+	setValue(value: string): void {
+		this.value = value;
+	}
+
+	setRaw(raw: any): void {
+		this.raw = raw;
+	}
+
+	getCobolName(): string {
+		return this.fieldCobol;
+	}
+
+	getCName(): string {
+		return this.fieldC;
+	}
+
+	getType(): string {
+		return this.type;
+	}
+
+	getValue(): string {
+		return this.value;
+	}
+
+	getRaw(): any {
+		return this.raw;
+	}
+
+	public toString(): string {
+		return `${this.fieldCobol} > ${this.fieldC}`;
 	}
 }
 
 export class SourceMap {
 	private cwd: string;
 	private lines: Line[] = new Array<Line>();
-	private vars: Variable[] = new Array<Variable>();
+	private dataStoragesByC: Map<string, DataStorage> = new Map<string, DataStorage>();
+	private dataStoragesByCobol: Map<string, DataStorage> = new Map<string, DataStorage>();
+	private fieldsByC: Map<string, Field> = new Map<string, Field>();
+	private fieldsByCobol: Map<string, Field> = new Map<string, Field>();
+
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
 		filesCobol.forEach(e => {
@@ -71,13 +175,19 @@ export class SourceMap {
 				}
 				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
 			}
-			match = varRegex.exec(line);
+			match = dataStorageRegex.exec(line);
 			if (match) {
-				this.vars.push(new Variable(match[2], match[1]));
+				const dataStorage = new DataStorage(match[2], match[1]);
+				this.dataStoragesByC.set(match[1], dataStorage);
+				this.dataStoragesByCobol.set(match[2], dataStorage);
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
-				this.vars.push(new Variable(match[2], match[1]));
+				const dataStorage = this.dataStoragesByC.get(match[2]);
+				const field = new Field(match[3], match[1]);
+				dataStorage.vars.set(match[1], field);
+				this.fieldsByC.set(field.fieldC, field);
+				this.fieldsByCobol.set(field.fieldCobol, field);
 			}
 			match = fileIncludeRegex.exec(line);
 			if (match) {
@@ -91,12 +201,40 @@ export class SourceMap {
 		return this.lines.length;
 	}
 
-	public getVarsCount(): number {
-		return this.vars.length;
+	public getDataStoragesCount(): number {
+		return this.dataStoragesByC.size;
 	}
 
-	public hasVarCobol(varC: string): boolean {
-		return this.vars.some(e => e.varC === varC);
+	public getDataStorages(): IterableIterator<CobolVariable> {
+		return this.dataStoragesByC.values();
+	}
+
+	public getFields(): IterableIterator<CobolVariable> {
+		return this.fieldsByC.values();
+	}
+
+	public getCobolVariableByC(varC: string): CobolVariable {
+		if(this.dataStoragesByC.has(varC)) {
+			return this.dataStoragesByC.get(varC);
+		}
+		if(this.fieldsByC.has(varC)) {
+			return this.fieldsByC.get(varC);
+		}
+		return null;
+	}
+
+	public getCobolVariableByCobol(varCobol: string): CobolVariable {
+		if(this.dataStoragesByCobol.has(varCobol)) {
+			return this.dataStoragesByCobol.get(varCobol);
+		}
+		if(this.fieldsByCobol.has(varCobol)) {
+			return this.fieldsByCobol.get(varCobol);
+		}
+		return null;
+	}
+
+	public hasDataStorageCobol(dataStorageC: string): boolean {
+		return this.dataStoragesByC.has(dataStorageC);
 	}
 
 	public hasLineCobol(fileC: string, lineC: number): boolean {
@@ -105,13 +243,13 @@ export class SourceMap {
 		return this.lines.some(e => e.fileC === fileC && e.lineC === lineC);
 	}
 
-	public getVarCobol(varC: string): string {
-		return this.vars.find(e => e.varC === varC)?.varCobol;
+	public getDataStorageCobol(dataStorageC: string): string {
+		return this.dataStoragesByC.get(dataStorageC)?.dataStorageCobol;
 	}
 
-	public getVarC(varCobol: string): string {
-		varCobol = varCobol.replace(replaceRegex, '');
-		return this.vars.find(e => e.varCobol === varCobol)?.varC;
+	public getDataStorageC(dataStorageCobol: string): string {
+		dataStorageCobol = dataStorageCobol.replace(replaceRegex, '');
+		return this.dataStoragesByCobol.get(dataStorageCobol)?.dataStorageC;
 	}
 
 	public getLineC(fileCobol: string, lineCobol: number): Line {
@@ -143,7 +281,7 @@ export class SourceMap {
 		this.lines.forEach(e => {
 			out += e.toString() + "\n";
 		});
-		this.vars.forEach(e => {
+		this.dataStoragesByC.forEach(e => {
 			out += e.toString() + "\n";
 		});
 		return out;
