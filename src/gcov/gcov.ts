@@ -4,6 +4,9 @@
  * https://github.com/eclipse/linuxtools/tree/master/gcov
  * Eclipse Public License 2.0
  */
+import { GcdaRecordsParser } from './parser.gcda';
+import { GcnoRecordsParser } from './parser.gcno';
+import * as fs from "fs";
 
 export class Arc {
 	readonly VCOV_ARC_ON_TREE: number = (1 << 0);
@@ -51,13 +54,10 @@ export class Block {
 	}
 }
 
-export class Coverage {
-	lines: Map<number, boolean> = new Map<number, boolean>();
-	file: string;
-
-	constructor(file: string) {
-		this.file = file;
-	}
+export interface Coverage {
+	fileC: string;
+	lineC: number;
+	hasExecuted: boolean;
 }
 
 export class Line {
@@ -300,3 +300,73 @@ export class GcnoFunction {
 	}
 }
 
+export function parseGcov(gcdaFiles: string[]): Coverage[] {
+	let gcdaRecordsParser: GcdaRecordsParser;
+	let stream: DataInput;
+	let sourceFiles: SourceFile[] = [];
+	let gcnoFunctions: GcnoFunction[] = [];
+	let sourceMap: Map<string, SourceFile> = new Map<string, SourceFile>();
+
+	for (let gcdaFile of gcdaFiles) {
+		// parse GCNO
+		let gcnoPath = gcdaFile.split('.').slice(0, -1).join('.') + '.gcno';
+		if (!fs.existsSync(gcnoPath)) {
+			throw Error("File not found: " + gcnoPath);
+		}
+		stream = new DataInput(fs.readFileSync(gcnoPath));
+		let gcnoRecordsParser = new GcnoRecordsParser(sourceMap, sourceFiles);
+		gcnoRecordsParser.parse(stream);
+
+		// add new functions
+		for (let f of gcnoRecordsParser.getFunctions()) {
+			gcnoFunctions.push(f);
+		}
+
+		// parse GCDA
+		if (!fs.existsSync(gcnoPath)) {
+			throw Error("File not found: " + gcnoPath);
+		}
+		stream = new DataInput(fs.readFileSync(gcdaFile));
+		if (gcnoRecordsParser.getFunctions().length === 0) {
+			throw new Error("Parsing error");
+		}
+		gcdaRecordsParser = new GcdaRecordsParser(gcnoRecordsParser.getFunctions());
+		gcdaRecordsParser.parse(stream);
+	}
+
+	let coverages: Map<string, Coverage> = new Map<string, Coverage>();
+	for (let sourceFile of sourceFiles) {
+		let linesCount = sourceFile.linesCount;
+		for (let j = 0; j < linesCount; j++) {
+			sourceFile.lines.push(new Line());
+		}
+		for (let gcnoFunction of sourceFile.funcs) {
+			for (let block of gcnoFunction.functionBlocks) {
+				for (let lineno of block.lineNumbers) {
+					let line: Line = sourceFile.lines[lineno];
+					line.addBlock(block);
+				}
+			}
+			gcnoFunction.solveGraphFunction();
+			gcnoFunction.addLineCounts(sourceFiles);
+		}
+
+		// coverage
+		for (let line of sourceFile.lines) {
+			if (!line.exists) {
+				continue;
+			}
+			for (let block of line.blocks) {
+				for (let lineNum of block.lineNumbers) {
+					coverages.set(`${sourceFile.name}${lineNum}`, {
+						fileC: sourceFile.name,
+						lineC: lineNum,
+						hasExecuted: line.count > 0
+
+					} as Coverage);
+				}
+			}
+		}
+	}
+	return Array.from(coverages.values());
+}

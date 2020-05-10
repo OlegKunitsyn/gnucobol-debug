@@ -6,9 +6,10 @@
 		"cobol",
 		"gnucobol",
 		"debugger",
-		"debug"
+		"debug",
+		"code coverage"
 	],
-	"version": "0.22.13",
+	"version": "0.22.14",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -107,6 +108,11 @@
 								"description": "Environment variables",
 								"default": null
 							},
+							"coverage": {
+								"type": "boolean",
+								"description": "Enable code coverage",
+								"default": true
+							},
 							"verbose": {
 								"type": "boolean",
 								"description": "Debug GDB",
@@ -129,7 +135,8 @@
 							"-free",
 							"-x"
 						],
-						"group": []
+						"group": [],
+						"coverage": true
 					}
 				]
 			}

@@ -8,6 +8,7 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
+const gcovRegex = /\"([0-9a-z_\-\/\s]+\.o)\"/gi;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -19,6 +20,7 @@ export function couldBeOutput(line: string) {
 
 export class MI2 extends EventEmitter implements IDebugger {
 	private map: SourceMap;
+	private gcovFiles: Set<string> = new Set<string>();
 	public procEnv: any;
 	private currentToken: number = 1;
 	private handlers: { [index: number]: (info: MINode) => any } = {};
@@ -69,9 +71,29 @@ export class MI2 extends EventEmitter implements IDebugger {
 				return;
 			}
 
-			const args = this.cobcArgs.concat(['-g', '-fsource-location', '-ftraceall', target]).concat(group);
+			const args = this.cobcArgs.concat([
+				'-g',
+				'-fsource-location',
+				'-ftraceall',
+				'-Q',
+				'--coverage',
+				'-A',
+				'--coverage',
+				'-v',
+				target
+			]).concat(group);
 			const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
-			buildProcess.stderr.on("data", ((err) => { this.emit("launcherror", err); }).bind(this));
+			buildProcess.stderr.on('data', (data) => {
+				if (this.verbose)
+					this.log("stderr", data);
+				let match;
+				do {
+					match = gcovRegex.exec(data);
+					if (match) {
+						this.gcovFiles.add(match[1].split('.').slice(0, -1).join('.') + '.gcda');
+					}
+				} while (match);
+			});
 			buildProcess.on('exit', (code) => {
 				if (code !== 0) {
 					this.emit("quit");
@@ -184,9 +206,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	stdin(data: string) {
-		if (this.verbose)
-			this.log("stderr", "stdin: " + data);
-		this.process.stdin.write(data + "\n");
+		if (this.isReady) {
+			if (this.verbose)
+				this.log("stderr", "stdin: " + data);
+			this.process.stdin.write(data + "\n");
+		}
 	}
 
 	onOutputStderr(lines) {
@@ -262,7 +286,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 									else if (reason == "exited") { // exit with error code != 0
 										if (this.verbose)
 											this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
-										this.emit("exited-normally", parsed);
+										this.emit("quit", parsed);
 									} else {
 										if (this.verbose)
 											this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
@@ -330,7 +354,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
-		this.stdin("-target-detach");
+		this.sendCommand("target-detach");
 	}
 
 	interrupt(): Thenable<boolean> {
@@ -700,5 +724,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 	isReady(): boolean {
 		return !!this.process;
+	}
+
+	getGcovFiles(): string[] {
+		return Array.from(this.gcovFiles);
+	}
+
+	getSourceMap(): SourceMap {
+		return this.map;
 	}
 }

@@ -1,3 +1,7 @@
+## 0.22.14
+* Fix failing on non-empty `cobc` output. [Issue #25](https://github.com/OlegKunitsyn/gnucobol-debug/issues/25)
+* Implement Code Coverage. [Issue #23](https://github.com/OlegKunitsyn/gnucobol-debug/issues/23)
+
 ## 0.22.13
 * Fix `Step Over` in CALL execution. [Issue #21](https://github.com/OlegKunitsyn/gnucobol-debug/issues/21)
 

@@ -12,14 +12,15 @@ import {
 	Thread,
 	ThreadEvent
 } from 'vscode-debugadapter';
-import {DebugProtocol} from 'vscode-debugprotocol';
+import { DebugProtocol } from 'vscode-debugprotocol';
 import * as systemPath from "path";
 import * as net from "net";
 import * as os from "os";
 import * as fs from "fs";
-import {MIError, Variable, VariableObject} from './debugger';
-import {MINode} from './parser.mi2';
-import {MI2} from './mi2';
+import { MIError, Variable, VariableObject } from './debugger';
+import { MINode } from './parser.mi2';
+import { MI2 } from './mi2';
+import { CoverageStatus } from './coverage';
 
 const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*|\[\d+\])\s*=\s*/;
 const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
@@ -49,6 +50,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	env: any;
 	group: string[];
 	verbose: boolean;
+	coverage: boolean;
 }
 
 export class GDBDebugSession extends DebugSession {
@@ -63,12 +65,16 @@ export class GDBDebugSession extends DebugSession {
 	protected miDebugger: MI2;
 	protected commandServer: net.Server;
 	protected serverPath: string;
+	coverageStatus: CoverageStatus;
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 		this.sendResponse(response);
 	}
 
-	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {		
+	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {	
+		if (!args.coverage) {
+			this.coverageStatus = undefined;
+		}
 		this.miDebugger = new MI2(args.gdbpath, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug);
 		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
@@ -177,6 +183,13 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected quitEvent() {
+		if (this.quit)
+			return;
+
+		if (this.coverageStatus !== undefined) {
+			this.coverageStatus.show(this.miDebugger.getGcovFiles(), this.miDebugger.getSourceMap());
+		}
+
 		this.quit = true;
 		this.sendEvent(new TerminatedEvent());
 

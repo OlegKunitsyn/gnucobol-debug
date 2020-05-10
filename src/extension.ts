@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
 import * as ChildProcess from "child_process";
 import { GDBDebugSession } from "./gdb";
+import { CoverageStatus } from './coverage';
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.debug.registerDebugConfigurationProvider('gdb', new GdbConfigurationProvider()),
-        vscode.debug.registerDebugAdapterDescriptorFactory('gdb', new GdbAdapterDescriptorFactory())
+        vscode.debug.registerDebugAdapterDescriptorFactory('gdb', new GdbAdapterDescriptorFactory(new CoverageStatus(), new GDBDebugSession())),
     );
 }
 
@@ -21,7 +22,9 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
 }
 
 class GdbAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    constructor(public coverageBar:CoverageStatus, public debugSession:GDBDebugSession) {}
     createDebugAdapterDescriptor(_session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-        return new vscode.DebugAdapterInlineImplementation(new GDBDebugSession());
+        this.debugSession.coverageStatus = this.coverageBar;
+        return new vscode.DebugAdapterInlineImplementation(this.debugSession);
     }
 }
