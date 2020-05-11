@@ -8,7 +8,8 @@ import {
   OverviewRulerLane,
   ThemeColor,
   StatusBarAlignment,
-  Disposable
+  Disposable,
+  commands
 } from "vscode";
 import { Coverage, parseGcov } from "./gcov/gcov";
 import { SourceMap } from "./parser.c";
@@ -31,6 +32,8 @@ export class CoverageStatus implements Disposable {
     outline: 'none',
     backgroundColor: 'rgba(20, 250, 20, 0.2)'
   });
+  readonly COMMAND = 'gdb.coverage-toggle';
+  private highlight: boolean = true;
 
   constructor() {
     workspace.onDidOpenTextDocument(() => {
@@ -42,6 +45,11 @@ export class CoverageStatus implements Disposable {
     window.onDidChangeActiveTextEditor(() => {
       this.updateStatus();
     });
+    commands.registerCommand(this.COMMAND, () => {
+      this.highlight = !this.highlight;
+      this.updateStatus();
+    });
+    this.statusBar.command = this.COMMAND;
   }
 
   public show(gcovFiles: string[], sourceMap: SourceMap) {
@@ -51,6 +59,7 @@ export class CoverageStatus implements Disposable {
   }
 
   public dispose() {
+    this.statusBar.dispose();
   }
 
   private updateStatus() {
@@ -75,18 +84,18 @@ export class CoverageStatus implements Disposable {
         }
       }
     }
-    if (red.length === 0) {
+    if (red.length === 0 || !this.highlight) {
       editor.setDecorations(this.RED, []);
     } else {
       editor.setDecorations(this.RED, red);
     }
-    if (green.length === 0) {
+    if (green.length === 0 || !this.highlight) {
       editor.setDecorations(this.GREEN, []);
     } else {
       editor.setDecorations(this.GREEN, green);
     }
     const total = Math.max(1, red.length + green.length);
-    this.statusBar.text = `$(eye) ` + Math.ceil(green.length * 100 / total) + '%';
+    this.statusBar.text = (this.highlight ? `$(eye) ` : `$(eye-closed) `) + Math.ceil(green.length * 100 / total) + '%';
     this.statusBar.tooltip = `Covered ${green.length} of ${total} lines`;
     this.statusBar.show();
   }

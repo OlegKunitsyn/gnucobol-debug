@@ -15,7 +15,7 @@ export class GcdaRecordsParser implements IRecordParser{
     }
 
     public parse(stream:DataInput):void{
-        let magic;
+        let magic = 0;
         let gcnoFunction:GcnoFunction = null;
         magic = stream.readInt();
 
@@ -40,7 +40,6 @@ export class GcdaRecordsParser implements IRecordParser{
                     continue;
                 }
                 let length = stream.readInt();
-
                 switch (tag) {
                     case this.GCOV_TAG_FUNCTION: {
                         let ident = stream.readInt();
@@ -61,7 +60,6 @@ export class GcdaRecordsParser implements IRecordParser{
                         }
                         break;
                     }
-
                     case this.GCOV_COUNTER_ARCS: {
                         if (gcnoFunction == null) {
                             throw new Error("Parsing error");
@@ -85,7 +83,6 @@ export class GcdaRecordsParser implements IRecordParser{
                         gcnoFunction = null;
                         break;
                     }
-
                     case this.GCOV_TAG_OBJECT_SYMMARY: {
                         if (version >= this.GCC_VER_900) {
                             stream.readInt();
@@ -100,7 +97,6 @@ export class GcdaRecordsParser implements IRecordParser{
                         }
                         break;
                     }
-
                     case this.GCOV_TAG_PROGRAM_SUMMARY: {
                         stream.readInt();
                         stream.readInt();

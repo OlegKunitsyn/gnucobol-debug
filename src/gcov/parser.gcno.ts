@@ -50,7 +50,6 @@ export class GcnoRecordsParser implements IRecordParser {
                         break;
                 }
                 let length = stream.readInt();
-
                 switch (tag) {
                     case this.GCOV_TAG_FUNCTION:
                         if (parseFirstFunction) {
@@ -79,7 +78,7 @@ export class GcnoRecordsParser implements IRecordParser {
                         if (this.gcnoFunction.firstLineNumber >= file.linesCount) {
                             file.linesCount = this.gcnoFunction.firstLineNumber + 1;
                         }
-                        file.addFunction(this.gcnoFunction);
+                        file.functions.add(this.gcnoFunction);
                         parseFirstFunction = true;
                         break;
                     case this.GCOV_TAG_BLOCKS:
@@ -96,23 +95,17 @@ export class GcnoRecordsParser implements IRecordParser {
                         break;
                     case this.GCOV_TAG_ARCS:
                         let srcBlockIdx = stream.readInt();
-                        let arcNumber = (length - 1) / 2;
+                        let block = blocks[srcBlockIdx];
                         let arcs: Arc[] = [];
-                        for (let i = 0; i < arcNumber; i++) {
+                        for (let i = 0; i < (length - 1) / 2; i++) {
                             let dstBlockIdx = stream.readInt();
                             let flag = stream.readInt();
                             let arc = new Arc(srcBlockIdx, dstBlockIdx, flag, blocks);
+                            arc.dstBlock.entryArcs.push(arc);
+                            arc.dstBlock.predictionsCount++;
                             arcs.push(arc);
-                        }
-                        let block = blocks[srcBlockIdx];
-                        for (let a of arcs) {
-                            block.addExitArcs(a);
+                            block.exitArcs.push(arc);
                             block.successCount++;
-                        }
-                        for (let a of arcs) {
-                            let dstBlock = a.dstBlock;
-                            dstBlock.addEntryArcs(a);
-                            dstBlock.predictionsCount++;
                         }
                         this.gcnoFunction.functionBlocks = blocks;
                         break;

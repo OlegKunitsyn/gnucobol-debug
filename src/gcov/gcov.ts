@@ -44,14 +44,6 @@ export class Block {
 	isValidChain: boolean = false;
 	isInvalidChain: boolean = false;
 	countValid: boolean = false;
-
-	public addEntryArcs(arcEntry: Arc): void {
-		this.entryArcs.push(arcEntry);
-	}
-
-	public addExitArcs(arcExit: Arc): void {
-		this.exitArcs.push(arcExit);
-	}
 }
 
 export interface Coverage {
@@ -64,30 +56,18 @@ export class Line {
 	exists: boolean = false;
 	count: number = 0;
 	blocks: Set<Block> = new Set<Block>();
-
-	public addBlock(b: Block): void {
-		this.blocks.add(b);
-	}
-
-	public hasBlock(b: Block): boolean {
-		return this.blocks.has(b);
-	}
 }
 
 export class SourceFile {
 	name: string;
 	index: number;
 	lines: Line[] = [];
-	funcs: Set<GcnoFunction> = new Set<GcnoFunction>();
+	functions: Set<GcnoFunction> = new Set<GcnoFunction>();
 	linesCount: number = 1;
 
 	constructor(name: string, index: number) {
 		this.name = name;
 		this.index = index;
-	}
-
-	public addFunction(func: GcnoFunction): void {
-		this.funcs.add(func);
 	}
 }
 
@@ -107,22 +87,22 @@ export class DataInput {
 	public readString(): string {
 		const length = this.readInt() << 2;
 		this.offset += length;
-		return this.buffer.slice(this.offset - length, this.offset).toString('utf8').replace(/\0/g, '');
+		return this.buffer.subarray(this.offset - length, this.offset).toString('utf8').replace(/\0/g, '');
 	}
 
 	public readInt(): number {
 		this.offset += 4;
 		return this.isBigEndian ?
-			this.buffer.slice(this.offset - 4, this.offset).readUInt32BE() :
-			this.buffer.slice(this.offset - 4, this.offset).readUInt32LE();
+			this.buffer.subarray(this.offset - 4, this.offset).readUInt32BE() :
+			this.buffer.subarray(this.offset - 4, this.offset).readUInt32LE();
 	}
 
 	public readLong(): number {
 		this.offset += 8;
 		return Number(
 			this.isBigEndian ?
-				this.buffer.slice(this.offset - 8, this.offset).readBigUInt64BE() :
-				this.buffer.slice(this.offset - 8, this.offset).readBigUInt64LE()
+				this.buffer.subarray(this.offset - 8, this.offset).readBigUInt64BE() :
+				this.buffer.subarray(this.offset - 8, this.offset).readBigUInt64LE()
 		);
 	}
 
@@ -174,9 +154,9 @@ export class GcnoFunction {
 		}
 		for (let line of linesToCalculate) {
 			let count = 0;
-			for (let b of line.blocks) {
-				for (let arc of b.entryArcs) {
-					if (!line.hasBlock(arc.srcBlock)) {
+			for (let block of line.blocks) {
+				for (let arc of block.entryArcs) {
+					if (!line.blocks.has(arc.srcBlock)) {
 						count += arc.count;
 					}
 				}
@@ -340,11 +320,11 @@ export function parseGcov(gcdaFiles: string[]): Coverage[] {
 		for (let j = 0; j < linesCount; j++) {
 			sourceFile.lines.push(new Line());
 		}
-		for (let gcnoFunction of sourceFile.funcs) {
+		for (let gcnoFunction of sourceFile.functions) {
 			for (let block of gcnoFunction.functionBlocks) {
 				for (let lineno of block.lineNumbers) {
 					let line: Line = sourceFile.lines[lineno];
-					line.addBlock(block);
+					line.blocks.add(block);
 				}
 			}
 			gcnoFunction.solveGraphFunction();
