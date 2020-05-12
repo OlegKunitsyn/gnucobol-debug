@@ -1,6 +1,6 @@
 import * as readline from "n-readlines";
 import * as nativePath from "path";
-import { Variable } from "./debugger";
+import { DebuggerVariable } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
 const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
@@ -25,113 +25,11 @@ export class Line {
 	}
 }
 
-export class DataStorage implements Variable {
-	private type: string;
-	private value: string;
-	private raw: any;
-
-	constructor(
-		public dataStorageCobol: string,
-		public dataStorageC: string,
-		public vars: Map<string, Field> = new Map<string, Field>()
-	) { }
-
-	setType(type: string): void {
-		this.type = type;
-	}
-
-	setValue(value: string): void {
-		this.value = value;
-	}
-
-	setRaw(raw: any): void {
-		this.raw = raw;
-	}
-
-	getCobolName(): string {
-		return this.dataStorageCobol;
-	}
-
-	getCName(): string {
-		return this.dataStorageC;
-	}
-
-	getType(): string {
-		return this.type;
-	}
-
-	getValue(): string {
-		return this.value;
-	}
-
-	getRaw(): any {
-		return this.raw;
-	}
-
-	public toString(): string {
-		let out = `${this.dataStorageCobol} > ${this.dataStorageC}:\n\t`;
-		this.vars.forEach(e => {
-			out += e.toString() + "\n\t";
-		});
-		return out;
-	}
-}
-
-export class Field implements Variable {
-
-	private type: string;
-	private value: string;
-	private raw: any;
-
-	constructor(
-		public fieldCobol: string,
-		public fieldC: string
-	) { }
-
-	setType(type: string): void {
-		this.type = type;
-	}
-
-	setValue(value: string): void {
-		this.value = value;
-	}
-
-	setRaw(raw: any): void {
-		this.raw = raw;
-	}
-
-	getCobolName(): string {
-		return this.fieldCobol;
-	}
-
-	getCName(): string {
-		return this.fieldC;
-	}
-
-	getType(): string {
-		return this.type;
-	}
-
-	getValue(): string {
-		return this.value;
-	}
-
-	getRaw(): any {
-		return this.raw;
-	}
-
-	public toString(): string {
-		return `${this.fieldCobol} > ${this.fieldC}`;
-	}
-}
-
 export class SourceMap {
 	private cwd: string;
 	private lines: Line[] = new Array<Line>();
-	private dataStoragesByC: Map<string, DataStorage> = new Map<string, DataStorage>();
-	private dataStoragesByCobol: Map<string, DataStorage> = new Map<string, DataStorage>();
-	private fieldsByC: Map<string, Field> = new Map<string, Field>();
-	private fieldsByCobol: Map<string, Field> = new Map<string, Field>();
+	private variableRoot = new DebuggerVariable("ROOT", "ROOT");
+	private variablesByC: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>();
 
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
@@ -166,19 +64,18 @@ export class SourceMap {
 			}
 			match = dataStorageRegex.exec(line);
 			if (match) {
-				const dataStorage = new DataStorage(match[2], match[1]);
-				this.dataStoragesByC.set(match[1], dataStorage);
-				this.dataStoragesByCobol.set(match[2], dataStorage);
+				const dataStorage = new DebuggerVariable(match[2], match[1]);
+				this.variablesByC.set(match[1], dataStorage);
+				this.variableRoot.addChild(dataStorage);
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
 				//TODO - Add placeholder for fields without data storages or simply ignore them.
-				const dataStorage = this.dataStoragesByC.get(match[2]);
+				const dataStorage = this.variablesByC.get(match[2]);
 				if (dataStorage !== undefined) {
-					const field = new Field(match[3], match[1]);
-					dataStorage.vars.set(match[1], field);
-					this.fieldsByC.set(field.fieldC, field);
-					this.fieldsByCobol.set(field.fieldCobol, field);
+					const field = new DebuggerVariable(match[3], match[1]);
+					dataStorage.addChild(field);
+					this.variablesByC.set(field.cName, field);
 				}
 			}
 			match = fileIncludeRegex.exec(line);
@@ -194,47 +91,30 @@ export class SourceMap {
 	}
 
 	public getDataStoragesCount(): number {
-		return this.dataStoragesByC.size;
+		return this.variableRoot.size();
 	}
 
-	public getDataStorages(): Variable[] {
-		const ret: Variable[] = [];
-		for (let cobolVariable of this.dataStoragesByC.values()) {
-			ret.push(cobolVariable);
+	public getDataStorages(): DebuggerVariable[] {
+		const ret: DebuggerVariable[] = [];
+		for (let variable of this.variableRoot.children.values()) {
+			ret.push(variable);
 		}
 		return ret;
 	}
 
-	public getFields(): Variable[] {
-		const ret: Variable[] = [];
-		for (let cobolVariable of this.fieldsByC.values()) {
-			ret.push(cobolVariable);
-		}
-		return ret;
-	}
-
-	public getCobolVariableByC(varC: string): Variable {
-		if (this.dataStoragesByC.has(varC)) {
-			return this.dataStoragesByC.get(varC);
-		}
-		if (this.fieldsByC.has(varC)) {
-			return this.fieldsByC.get(varC);
+	public getCobolVariableByC(varC: string): DebuggerVariable {
+		if (this.variablesByC.has(varC)) {
+			return this.variablesByC.get(varC);
 		}
 		return null;
 	}
 
-	public getCobolVariableByCobol(varCobol: string): Variable {
-		if (this.dataStoragesByCobol.has(varCobol)) {
-			return this.dataStoragesByCobol.get(varCobol);
-		}
-		if (this.fieldsByCobol.has(varCobol)) {
-			return this.fieldsByCobol.get(varCobol);
-		}
-		return null;
+	public getCobolVariableByCobol(cobolPath: string): DebuggerVariable {
+		return this.variableRoot.getChild(cobolPath);
 	}
 
 	public hasDataStorageCobol(dataStorageC: string): boolean {
-		return this.dataStoragesByC.has(dataStorageC);
+		return this.variablesByC.has(dataStorageC);
 	}
 
 	public hasLineCobol(fileC: string, lineC: number): boolean {
@@ -244,12 +124,12 @@ export class SourceMap {
 	}
 
 	public getDataStorageCobol(dataStorageC: string): string {
-		return this.dataStoragesByC.get(dataStorageC)?.dataStorageCobol;
+		return this.variablesByC.get(dataStorageC)?.cobolName;
 	}
 
 	public getDataStorageC(dataStorageCobol: string): string {
 		dataStorageCobol = dataStorageCobol.replace(replaceRegex, '');
-		return this.dataStoragesByCobol.get(dataStorageCobol)?.dataStorageC;
+		return this.variableRoot.getChild(dataStorageCobol)?.cName;
 	}
 
 	public getLineC(fileCobol: string, lineCobol: number): Line {
@@ -281,9 +161,9 @@ export class SourceMap {
 		this.lines.forEach(e => {
 			out += e.toString() + "\n";
 		});
-		this.dataStoragesByC.forEach(e => {
-			out += e.toString() + "\n";
-		});
+
+		out += this.variableRoot.toString() + "\n";
+		
 		return out;
 	}
 }

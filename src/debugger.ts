@@ -1,5 +1,5 @@
-import {MINode} from "./parser.mi2";
-import {DebugProtocol} from "vscode-debugprotocol/lib/debugProtocol";
+import { MINode } from "./parser.mi2";
+import { DebugProtocol } from "vscode-debugprotocol/lib/debugProtocol";
 
 export interface Breakpoint {
 	file?: string;
@@ -24,15 +24,46 @@ export interface Stack {
 	line: number;
 }
 
-export interface Variable {
-	setType(value: string): void;
-	setValue(type: string): void;
-	setRaw(raw: any): void;
-	getCobolName(): string;
-	getCName(): string;
-	getType(): string;
-	getValue(): string;
-	getRaw(): any;
+export class DebuggerVariable {
+
+	public constructor(
+		public cobolName: string,
+		public cName: string,
+		public type: string = null,
+		public value: string = null,
+		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
+
+	public addChild(child: DebuggerVariable): void {
+		this.children.set(child.cobolName, child);
+	}
+
+	public getChild(path: string): DebuggerVariable {
+		let childName = path;
+		let pathHasEnded = true;
+		if (path.indexOf(".") !== -1) {
+			childName = path.substring(0, path.indexOf("."));
+			pathHasEnded = false;
+		}
+		const child = this.children.get(childName);
+		if (pathHasEnded) {
+			return child;
+		} else if (child !== undefined) {
+			return child.getChild(path.substring(path.indexOf(".") + 1));
+		}
+		return undefined;
+	}
+
+	public size(): number {
+		return this.children.size;
+	}
+
+	public toString(): string {
+		let out = `${this.cobolName} > ${this.cName}:\n\t`;
+		for (let child of this.children.values()) {
+			out += child.toString() + "\n\t";
+		}
+		return out;
+	}
 }
 
 export interface IDebugger {
@@ -52,7 +83,7 @@ export interface IDebugger {
 	clearBreakPoints(): Thenable<any>;
 	getThreads(): Thenable<Thread[]>;
 	getStack(maxLevels: number, thread: number): Thenable<Stack[]>;
-	getStackVariables(thread: number, frame: number): Thenable<Variable[]>;
+	getStackVariables(thread: number, frame: number): Thenable<DebuggerVariable[]>;
 	evalExpression(name: string, thread: number, frame: number): Thenable<any>;
 	isReady(): boolean;
 	changeVariable(name: string, rawValue: string): Thenable<any>;
@@ -119,11 +150,11 @@ export interface MIError extends Error {
 	readonly source: string;
 }
 export interface MIErrorConstructor {
-	new (message: string, source: string): MIError;
+	new(message: string, source: string): MIError;
 	readonly prototype: MIError;
 }
 
-export const MIError: MIErrorConstructor = <any> class MIError {
+export const MIError: MIErrorConstructor = <any>class MIError {
 	readonly name: string;
 	readonly message: string;
 	readonly source: string;

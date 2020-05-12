@@ -1,4 +1,4 @@
-import { Breakpoint, IDebugger, MIError, Stack, Thread, Variable, VariableObject } from "./debugger";
+import { Breakpoint, IDebugger, MIError, Stack, Thread, DebuggerVariable, VariableObject } from "./debugger";
 import * as ChildProcess from "child_process";
 import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
@@ -9,6 +9,7 @@ const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
 const dataValueRegex = /.*size\s\=\s(\d+).*?\>\s(.*),\sattr.*/i;
+const fieldValueRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -85,11 +86,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 				if (this.verbose)
 					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
 
-					try {
-						this.map = new SourceMap(cwd, [target].concat(group));
-					} catch(e) {
-						this.log('stderr', e);
-					}
+				try {
+					this.map = new SourceMap(cwd, [target].concat(group));
+				} catch (e) {
+					this.log('stderr', e);
+				}
 
 				if (this.verbose) {
 					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getDataStoragesCount()}`);
@@ -590,10 +591,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
+	async getStackVariables(thread: number, frame: number): Promise<DebuggerVariable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
-		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --all-values`);
+		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
 		const variables = result.result("variables");
 
 		for (let element of variables) {
@@ -604,13 +605,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const cobolVariable = this.map.getCobolVariableByC(key);
 
 			if (cobolVariable !== null) {
-				cobolVariable.setType(type);
-				cobolVariable.setValue(value);
-				cobolVariable.setRaw(element);
+				cobolVariable.type = type;
+				cobolVariable.value = value;
 			}
 		}
 
-		return this.map.getFields();
+		return this.map.getDataStorages();
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
@@ -623,7 +623,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async evalExpression(name: string, thread: number, frame: number): Promise<Variable> {
+	async evalExpression(name: string, thread: number, frame: number): Promise<DebuggerVariable> {
 		if (this.verbose)
 			this.log("stderr", "evalExpression");
 		let command = "data-evaluate-expression ";
@@ -631,34 +631,36 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		let cleanedName = name;
-		if(name.startsWith("*")) {
-			cleanedName = name.substring(1, name.indexOf("."));
-		}
+		const variable = this.map.getCobolVariableByCobol(name);
 
-		const variable = this.map.getCobolVariableByCobol(cleanedName);
-
-		command += variable.getCName();
+		command += variable.cName;
 
 		const response = await this.sendCommand(command);
 		const element = response.resultRecords.results;
 
 		let value = MINode.valueOf(element, "value");
 
-		if(value.startsWith("{")) {
+		if (value.startsWith("{")) {
 			const match = dataValueRegex.exec(value);
 			const size = parseInt(match[1]);
 			value = match[2];
-			if(value.startsWith("\"")) {
+			if (value.startsWith("\"")) {
+				const fieldMatch = fieldValueRegex.exec(value);
+				if (fieldMatch) {
+					const fullSize = parseInt(fieldMatch[2]);
+					let suffix = "";
+					for (let i = 0; i < Math.min(fullSize, size); i++) {
+						suffix += fieldMatch[1];
+					}
+					value = value.replace(fieldValueRegex, suffix);
+				}
 				value = `"${value.substring(1, size + 1)}"`;
-			} else if(value.startsWith("'")) {
-				value = `"${value.substring(0,3)} repeats ${size} times"`;
+			} else if (value.startsWith("'")) {
+				value = `"${value.substring(0, 3)} repeats ${size} times"`;
 			}
 		}
 
-		variable.setValue(value);
-		variable.setRaw(element);
-		
+		variable.value = value;
 
 		return variable;
 	}

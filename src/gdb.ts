@@ -17,7 +17,7 @@ import * as systemPath from "path";
 import * as net from "net";
 import * as os from "os";
 import * as fs from "fs";
-import { MIError, Variable, VariableObject } from './debugger';
+import { DebuggerVariable, VariableObject } from './debugger';
 import { MINode } from './parser.mi2';
 import { MI2 } from './mi2';
 
@@ -390,69 +390,19 @@ export class GDBDebugSession extends DebugSession {
 		};
 
 		if (typeof id == "number") {
-			let stack: Variable[];
+			let stack: DebuggerVariable[];
 			try {
 				const [threadId, level] = this.frameIdToThreadAndLevel(id);
 				stack = await this.miDebugger.getStackVariables(threadId, level);
 				for (const variable of stack) {
-					if (this.useVarObjects) {
-						try {
-							const varObjName = `var_${id}_${variable.getCobolName()}`;
-							let varObj: VariableObject;
-							try {
-								const changes = await this.miDebugger.varUpdate(varObjName);
-								const changelist = changes.result("changelist");
-								changelist.forEach((change) => {
-									const name = MINode.valueOf(change, "name");
-									const vId = this.variableHandlesReverse[name];
-									const v = this.variableHandles.get(vId) as any;
-									v.applyChanges(change);
-								});
-								const varId = this.variableHandlesReverse[varObjName];
-								varObj = this.variableHandles.get(varId) as any;
-							} catch (err) {
-								if (err instanceof MIError && err.message == "Variable object not found") {
-									varObj = await this.miDebugger.varCreate(variable.getCobolName(), varObjName);
-									const varId = findOrCreateVariable(varObj);
-									varObj.exp = variable.getCobolName();
-									varObj.id = varId;
-								} else {
-									throw err;
-								}
-							}
-							variables.push(varObj.toProtocolVariable());
-						} catch (err) {
-							variables.push({
-								name: variable.getCobolName(),
-								value: `<${err}>`,
-								variablesReference: 0
-							});
-						}
-					} else {
-						if (variable.getValue() !== undefined) {
-							let expanded = expandValue(createVariable, `{${variable.getCobolName()}=${variable.getValue()}}`, "", variable.getRaw());
-							if (expanded) {
-								if (typeof expanded[0] == "string")
-									expanded = [
-										{
-											name: "Value",
-											value: prettyStringArray(expanded),
-											variablesReference: 0
-										}
-									];
-								variables.push(expanded[0]);
-							}
-						} else {
-							variables.push({
-								name: variable.getCobolName(),
-								type: variable.getType(),
-								value: variable.getType(),
-								variablesReference: createVariable(variable.getCobolName())
-							});
-						}
-					}
+					variables.push({
+						name: variable.cobolName,
+						type: variable.type,
+						value: variable.type,
+						variablesReference: createVariable(variable.cobolName)
+					});
 				}
-				
+
 				response.body = {
 					variables: variables
 				};
@@ -462,31 +412,33 @@ export class GDBDebugSession extends DebugSession {
 			}
 		} else if (typeof id == "string") {
 			// Variable members
-			let variable: Variable;
+			let variable: DebuggerVariable;
 			try {
 				// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
 				variable = await this.miDebugger.evalExpression(id, 0, 0);
-				try {
-					let expanded = expandValue(createVariable, variable.getValue(), id, variable);
-					if (!expanded) {
-						this.sendErrorResponse(response, 2, `Could not expand variable`);
-					} else {
-						if (typeof expanded[0] == "string")
-							expanded = [
-								{
-									name: "Value",
-									value: prettyStringArray(expanded),
-									variablesReference: 0
-								}
-							];
-						response.body = {
-							variables: expanded
-						};
-						this.sendResponse(response);
+
+				let variableChildren: DebugProtocol.Variable[] = [];
+				if(variable.size() > 1) {
+					for (const child of variable.children.values()) {
+						variableChildren.push({
+							name: child.cobolName,
+							type: child.type,
+							value: child.type,
+							variablesReference: createVariable(`${id}.${child.cobolName}`)
+						});
 					}
-				} catch (e) {
-					this.sendErrorResponse(response, 2, `Could not expand variable: ${e}`);
+				} else {
+					variableChildren.push({
+						name: 'Value',
+						type: variable.type,
+						value: variable.value,
+						variablesReference: 0
+					});
 				}
+				response.body = {
+					variables: variableChildren
+				};
+				this.sendResponse(response);
 			} catch (err) {
 				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
 			}
@@ -524,7 +476,7 @@ export class GDBDebugSession extends DebugSession {
 						// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
 						const variable = await this.miDebugger.evalExpression(`${varReq.name}+${arrIndex})`, 0, 0);
 						try {
-							const expanded = expandValue(createVariable, variable.getValue(), varReq.name, variable);
+							const expanded = expandValue(createVariable, variable.value, varReq.name, variable);
 							if (!expanded) {
 								this.sendErrorResponse(response, 15, `Could not expand variable`);
 							} else {
@@ -624,7 +576,7 @@ export class GDBDebugSession extends DebugSession {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
-					result: res.getValue()
+					result: res.value
 				};
 				this.sendResponse(response);
 			}, msg => {
