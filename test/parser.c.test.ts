@@ -10,10 +10,9 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [c]);
 
 		assert.equal(3, parsed.getLinesCount());
-		assert.equal(1, parsed.getDataStoragesCount());
-		assert.equal('b_6', parsed.getDataStorageC('MYVAR'));
-		assert.equal('b_6', parsed.getDataStorageC('"MYVAR"'));
-		assert.equal('MYVAR', parsed.getDataStorageCobol('b_6'));
+		assert.equal(2, parsed.getDataStoragesCount());
+		assert.equal('b_6', parsed.getVariableByCobol('MYVAR').cName);
+		assert.equal('MYVAR', parsed.getVariableByC('b_6').cobolName);
 		assert.equal(105, parsed.getLineC(cobol, 8).lineC);
 		assert.equal(c, parsed.getLineC(cobol, 8).fileC);
 		assert.equal(105, parsed.getLineC('hello.cbl', 8).lineC);
@@ -22,7 +21,6 @@ suite("C code parse", () => {
 		assert.equal(cobol, parsed.getLineCobol(c, 105).fileCobol);
 		assert.equal(8, parsed.getLineCobol('hello.c', 105).lineCobol);
 		assert.equal(cobol, parsed.getLineCobol('hello.c', 105).fileCobol);
-		assert.equal(9, parsed.getNextStep(c, 105).lineCobol);
 		assert.equal(cobol, parsed.getLineCobol(c, 105).fileCobol);
 	});
 	test("Compilation Group", () => {
@@ -31,7 +29,16 @@ suite("C code parse", () => {
 		const cSubSubSample = nativePath.resolve(cwd, 'subsubsample.c');
 		const parsed = new SourceMap(cwd, [cSample, cSubSample, cSubSubSample]);
 
-		assert.equal(7, parsed.getLinesCount());
-		assert.equal(7, parsed.getDataStoragesCount());
+		assert.equal(8, parsed.getLinesCount());
+		assert.equal(8, parsed.getDataStoragesCount());
+	});
+	test("Variables Hierarchy", () => {
+		const c = nativePath.resolve(cwd, 'petstore.c');
+		const parsed = new SourceMap(cwd, [c]);
+
+		assert.equal('b_14', parsed.getVariableByCobol('WS-BILL').cName);
+		assert.equal('f_15', parsed.getVariableByCobol('WS-BILL.TOTAL-QUANTITY').cName);
+		assert.equal('WS-BILL', parsed.getVariableByC('b_14').cobolName);
+		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('f_15').cobolName);
 	});
 });
