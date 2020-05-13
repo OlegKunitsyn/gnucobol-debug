@@ -102,34 +102,21 @@ export class SourceMap {
 		return ret;
 	}
 
-	public getCobolVariableByC(varC: string): DebuggerVariable {
+	public getVariableByC(varC: string): DebuggerVariable {
 		if (this.variablesByC.has(varC)) {
 			return this.variablesByC.get(varC);
 		}
 		return null;
 	}
 
-	public getCobolVariableByCobol(cobolPath: string): DebuggerVariable {
+	public getVariableByCobol(cobolPath: string): DebuggerVariable {
 		return this.variableRoot.getChild(cobolPath);
-	}
-
-	public hasDataStorageCobol(dataStorageC: string): boolean {
-		return this.variablesByC.has(dataStorageC);
 	}
 
 	public hasLineCobol(fileC: string, lineC: number): boolean {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.join(this.cwd, fileC);
 		return this.lines.some(e => e.fileC === fileC && e.lineC === lineC);
-	}
-
-	public getDataStorageCobol(dataStorageC: string): string {
-		return this.variablesByC.get(dataStorageC)?.cobolName;
-	}
-
-	public getDataStorageC(dataStorageCobol: string): string {
-		dataStorageCobol = dataStorageCobol.replace(replaceRegex, '');
-		return this.variableRoot.getChild(dataStorageCobol)?.cName;
 	}
 
 	public getLineC(fileCobol: string, lineCobol: number): Line {
@@ -144,20 +131,9 @@ export class SourceMap {
 		return this.lines.find(e => e.fileC === fileC && e.lineC === lineC) ?? new Line('', 0, '', 0);
 	}
 
-	public getNextStep(fileC: string, lineC: number): Line {
-		let result = null;
-		const idx = this.lines.findIndex(e => e.fileC === fileC && e.lineC === lineC) + 1;
-		if (idx < this.lines.length) {
-			let line = this.getLineC(this.lines[idx].fileCobol, this.lines[idx].lineCobol);
-			if (line.lineC > 0) {
-				result = line;
-			}
-		}
-		return result;
-	}
-
 	public toString(): string {
-		let out = '';
+		let out = `SourceMap created: lines ${this.lines.length}, vars ${this.variablesByC.size}\n`;
+
 		this.lines.forEach(e => {
 			out += e.toString() + "\n";
 		});

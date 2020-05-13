@@ -93,7 +93,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 				}
 
 				if (this.verbose) {
-					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getDataStoragesCount()}`);
 					this.log("stderr", this.map.toString());
 				}
 
@@ -602,7 +601,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			const cobolVariable = this.map.getCobolVariableByC(key);
+			const cobolVariable = this.map.getVariableByC(key);
 
 			if (cobolVariable !== null) {
 				cobolVariable.type = type;
@@ -631,7 +630,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		const variable = this.map.getCobolVariableByCobol(name);
+		const variable = this.map.getVariableByCobol(name);
 
 		command += variable.cName;
 
