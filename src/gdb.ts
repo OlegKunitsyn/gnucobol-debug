@@ -397,7 +397,7 @@ export class GDBDebugSession extends DebugSession {
 				const stackVariable = await this.miDebugger.evalExpression(id, 0, 0);
 
 				const variables: DebugProtocol.Variable[] = [];
-				if (stackVariable.size() > 1) {
+				if (stackVariable.hasChildren()) {
 					for (const child of stackVariable.children.values()) {
 						variables.push({
 							name: child.cobolName,

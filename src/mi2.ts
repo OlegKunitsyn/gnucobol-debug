@@ -8,7 +8,7 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
-const dataValueRegex = /.*size\s\=\s(\d+).*?\>\s(.*),\sattr.*/i;
+const dataValueRegex = /.*size\s\=\s(\d+).*?data\s=\s(.*),\sattr.*/i;
 const fieldValueRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
 
 export function escape(str: string) {
@@ -590,26 +590,39 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
+	async getCurrentSourceFile(): Promise<string> {
+		if (this.verbose)
+			this.log("stderr", "getCurrentSourceFile");
+		const response = await this.sendCommand(`stack-info-frame`);
+		const fileName = response.result("frame.file");
+		return fileName.substring(0, fileName.lastIndexOf(".c"));
+	}
+
 	async getStackVariables(thread: number, frame: number): Promise<DebuggerVariable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
-		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
-		const variables = result.result("variables");
 
+		const file = await this.getCurrentSourceFile();
+
+		const variablesResponse = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const variables = variablesResponse.result("variables");
+
+		const currentFrameVariables = new Set<DebuggerVariable>();
 		for (let element of variables) {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			const cobolVariable = this.map.getVariableByC(key);
+			const cobolVariable = this.map.getVariableByC(`${file}.${key}`);
 
-			if (cobolVariable !== null) {
+			if (cobolVariable) {
 				cobolVariable.type = type;
 				cobolVariable.value = value;
+				currentFrameVariables.add(cobolVariable.getDataStorage());
 			}
 		}
 
-		return this.map.getDataStorages();
+		return Array.from(currentFrameVariables);
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
@@ -630,19 +643,23 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		const variable = this.map.getVariableByCobol(name);
+		const file = await this.getCurrentSourceFile();
+
+		const variable = this.map.getVariableByCobol(`${file}.${name}`);
 
 		command += variable.cName;
 
 		const response = await this.sendCommand(command);
-		const element = response.resultRecords.results;
-
-		let value = MINode.valueOf(element, "value");
+		let value = response.result("value");
 
 		if (value.startsWith("{")) {
 			const match = dataValueRegex.exec(value);
 			const size = parseInt(match[1]);
 			value = match[2];
+			value = value.substring(value.indexOf(" ") + 1);
+			if(value.startsWith("<")) {
+				value = value.substring(value.indexOf(" ") + 1);
+			}
 			if (value.startsWith("\"")) {
 				const fieldMatch = fieldValueRegex.exec(value);
 				if (fieldMatch) {
@@ -655,7 +672,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				}
 				value = `"${value.substring(1, size + 1)}"`;
 			} else if (value.startsWith("'")) {
-				value = `"${value.substring(0, 3)} repeats ${size} times"`;
+				value = `${value.substring(0, 3)} repeats ${size} times`;
 			}
 		}
 

@@ -10,9 +10,9 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [c]);
 
 		assert.equal(3, parsed.getLinesCount());
-		assert.equal(2, parsed.getDataStoragesCount());
-		assert.equal('b_6', parsed.getVariableByCobol('MYVAR').cName);
-		assert.equal('MYVAR', parsed.getVariableByC('b_6').cobolName);
+		assert.equal(3, parsed.getVariablesCount());
+		assert.equal('b_6', parsed.getVariableByCobol('hello.MYVAR').cName);
+		assert.equal('MYVAR', parsed.getVariableByC('hello.b_6').cobolName);
 		assert.equal(105, parsed.getLineC(cobol, 8).lineC);
 		assert.equal(c, parsed.getLineC(cobol, 8).fileC);
 		assert.equal(105, parsed.getLineC('hello.cbl', 8).lineC);
@@ -30,15 +30,25 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [cSample, cSubSample, cSubSubSample]);
 
 		assert.equal(8, parsed.getLinesCount());
-		assert.equal(8, parsed.getDataStoragesCount());
+		assert.equal(9, parsed.getVariablesCount());
+
+		assert.equal('b_13', parsed.getVariableByCobol('sample.WS-GROUP').cName);
+		assert.equal('f_13', parsed.getVariableByCobol('sample.WS-GROUP.WS-GROUP').cName);
+		assert.equal('f_8', parsed.getVariableByCobol('subsample.WS-GROUP').cName);
+		assert.equal('f_13', parsed.getVariableByCobol('subsubsample.WS-GROUP-ALPHANUMERIC').cName);
+		
+		assert.equal('WS-GROUP', parsed.getVariableByC('sample.WS-b_13').cName);
+		assert.equal('WS-GROUP', parsed.getVariableByC('sample.f_13').cName);
+		assert.equal('WS-GROUP', parsed.getVariableByC('subsample.f_8').cName);
+		assert.equal('WS-GROUP-ALPHANUMERIC', parsed.getVariableByC('subsubsample.f_13').cName);
 	});
 	test("Variables Hierarchy", () => {
 		const c = nativePath.resolve(cwd, 'petstore.c');
 		const parsed = new SourceMap(cwd, [c]);
 
-		assert.equal('b_14', parsed.getVariableByCobol('WS-BILL').cName);
-		assert.equal('f_15', parsed.getVariableByCobol('WS-BILL.TOTAL-QUANTITY').cName);
-		assert.equal('WS-BILL', parsed.getVariableByC('b_14').cobolName);
-		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('f_15').cobolName);
+		assert.equal('b_14', parsed.getVariableByCobol('petstore.WS-BILL').cName);
+		assert.equal('f_15', parsed.getVariableByCobol('petstore.WS-BILL.TOTAL-QUANTITY').cName);
+		assert.equal('WS-BILL', parsed.getVariableByC('petstore.b_14').cobolName);
+		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('petstore.f_15').cobolName);
 	});
 });

@@ -31,9 +31,11 @@ export class DebuggerVariable {
 		public cName: string,
 		public type: string = null,
 		public value: string = null,
+		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
 
 	public addChild(child: DebuggerVariable): void {
+		child.parent = this;
 		this.children.set(child.cobolName, child);
 	}
 
@@ -53,16 +55,15 @@ export class DebuggerVariable {
 		return undefined;
 	}
 
-	public size(): number {
-		return this.children.size;
+	public getDataStorage(): DebuggerVariable {
+		if(this.parent) {
+			return this.parent.getDataStorage();
+		}
+		return this;
 	}
 
-	public toString(): string {
-		let out = `${this.cobolName} > ${this.cName}:\n\t`;
-		for (let child of this.children.values()) {
-			out += child.toString() + "\n\t";
-		}
-		return out;
+	public hasChildren(): boolean {
+		return this.children.size > 0;
 	}
 }
 
