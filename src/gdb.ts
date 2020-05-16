@@ -45,12 +45,15 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	target: string;
 	targetargs: string[];
 	gdbpath: string;
+	gdbargs: string[];
 	cobcpath: string;
+	cobcver: number;
 	cobcargs: string[];
 	env: any;
 	group: string[];
 	verbose: boolean;
 	coverage: boolean;
+	container: string;
 }
 
 export class GDBDebugSession extends DebugSession {
@@ -66,6 +69,7 @@ export class GDBDebugSession extends DebugSession {
 	protected commandServer: net.Server;
 	protected serverPath: string;
 	coverageStatus: CoverageStatus;
+	private container: string;
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 		this.sendResponse(response);
@@ -75,7 +79,8 @@ export class GDBDebugSession extends DebugSession {
 		if (!args.coverage) {
 			this.coverageStatus = undefined;
 		}
-		this.miDebugger = new MI2(args.gdbpath, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug);
+		this.container = args.container;
+		this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcver, args.cobcargs, args.env, args.verbose, args.noDebug);
 		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
 		this.miDebugger.on("exited-normally", this.quitEvent.bind(this));
@@ -187,7 +192,7 @@ export class GDBDebugSession extends DebugSession {
 			return;
 
 		if (this.coverageStatus !== undefined) {
-			this.coverageStatus.show(this.miDebugger.getGcovFiles(), this.miDebugger.getSourceMap());
+			this.coverageStatus.show(this.miDebugger.getGcovFiles(), this.miDebugger.getSourceMap(), this.container);
 		}
 
 		this.quit = true;

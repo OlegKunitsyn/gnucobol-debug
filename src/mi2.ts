@@ -28,10 +28,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private buffer: string;
 	private errbuf: string;
 	private process: ChildProcess.ChildProcess;
-	private gdbArgs: string[] = ["-q", "--interpreter=mi2"];
 	private lastStepCommand: Function;
 
-	constructor(public gdbpath: string, public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
+	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcver: number, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
 		if (procEnv) {
 			const env = {};
@@ -57,6 +56,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
+
+		if (this.verbose && !this.noDebug)
+			this.log("stderr", `GnuCOBOL version: ${this.cobcver}`);
 
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
@@ -90,7 +92,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				do {
 					match = gcovRegex.exec(data);
 					if (match) {
-						this.gcovFiles.add(match[1].split('.').slice(0, -1).join('.') + '.gcda');
+						this.gcovFiles.add(match[1].split('.').slice(0, -1).join('.'));
 					}
 				} while (match);
 			});

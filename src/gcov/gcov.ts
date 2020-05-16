@@ -280,20 +280,20 @@ export class GcnoFunction {
 	}
 }
 
-export function parseGcov(gcdaFiles: string[]): Coverage[] {
+export function parseGcov(gcovFiles: string[]): Coverage[] {
 	let gcdaRecordsParser: GcdaRecordsParser;
 	let stream: DataInput;
 	let sourceFiles: SourceFile[] = [];
 	let gcnoFunctions: GcnoFunction[] = [];
 	let sourceMap: Map<string, SourceFile> = new Map<string, SourceFile>();
 
-	for (let gcdaFile of gcdaFiles) {
+	for (let gcovFile of gcovFiles) {
 		// parse GCNO
-		let gcnoPath = gcdaFile.split('.').slice(0, -1).join('.') + '.gcno';
-		if (!fs.existsSync(gcnoPath)) {
-			throw Error("File not found: " + gcnoPath);
+		let file = gcovFile + '.gcno';
+		if (!fs.existsSync(file)) {
+			throw Error("File not found: " + file);
 		}
-		stream = new DataInput(fs.readFileSync(gcnoPath));
+		stream = new DataInput(fs.readFileSync(file));
 		let gcnoRecordsParser = new GcnoRecordsParser(sourceMap, sourceFiles);
 		gcnoRecordsParser.parse(stream);
 
@@ -303,10 +303,11 @@ export function parseGcov(gcdaFiles: string[]): Coverage[] {
 		}
 
 		// parse GCDA
-		if (!fs.existsSync(gcnoPath)) {
-			throw Error("File not found: " + gcnoPath);
+		file = gcovFile + '.gcda';
+		if (!fs.existsSync(file)) {
+			throw Error("File not found: " + file);
 		}
-		stream = new DataInput(fs.readFileSync(gcdaFile));
+		stream = new DataInput(fs.readFileSync(file));
 		if (gcnoRecordsParser.getFunctions().length === 0) {
 			throw new Error("Parsing error");
 		}

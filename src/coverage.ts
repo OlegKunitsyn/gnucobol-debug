@@ -11,6 +11,9 @@ import {
   Disposable,
   commands
 } from "vscode";
+import * as os from "os";
+import * as nativePath from "path";
+import * as ChildProcess from "child_process";
 import { Coverage, parseGcov } from "./gcov/gcov";
 import { SourceMap } from "./parser.c";
 
@@ -52,7 +55,16 @@ export class CoverageStatus implements Disposable {
     this.statusBar.command = this.COMMAND;
   }
 
-  public show(gcovFiles: string[], sourceMap: SourceMap) {
+  public show(gcovFiles: string[], sourceMap: SourceMap, container:string = undefined) {
+    if (container !== undefined) {
+      for (let i = 0; i < gcovFiles.length; i++) {
+        const localPath = nativePath.resolve(os.tmpdir(), nativePath.basename(gcovFiles[i]));
+        ChildProcess.spawnSync('docker', ['cp', `${container}:${gcovFiles[i]}.gcda`, `${localPath}.gcda`]);
+        ChildProcess.spawnSync('docker', ['cp', `${container}:${gcovFiles[i]}.gcno`, `${localPath}.gcno`]);
+        gcovFiles[i] = localPath;
+      }
+    }
+
     this.coverage = parseGcov(gcovFiles);
     this.sourceMap = sourceMap;
     this.updateStatus();
@@ -94,9 +106,8 @@ export class CoverageStatus implements Disposable {
     } else {
       editor.setDecorations(this.GREEN, green);
     }
-    const total = Math.max(1, red.length + green.length);
-    this.statusBar.text = (this.highlight ? `$(eye) ` : `$(eye-closed) `) + Math.ceil(green.length * 100 / total) + '%';
-    this.statusBar.tooltip = `Covered ${green.length} of ${total} lines`;
+    this.statusBar.text = (this.highlight ? `$(eye) ` : `$(eye-closed) `) + Math.ceil(green.length * 100 / Math.max(1, red.length + green.length)) + '%';
+    this.statusBar.tooltip = `Covered ${green.length} of ${red.length} lines`;
     this.statusBar.show();
   }
 }

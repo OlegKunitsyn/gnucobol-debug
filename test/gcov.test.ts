@@ -7,7 +7,7 @@ suite("Gcov", () => {
 	const cwd = nativePath.resolve(__dirname, '../../test/resources/gcov');
 	test("Hello", () => {
 		const expected = parseLcov(nativePath.resolve(cwd, 'hello.info'));
-		const test = parseGcov([nativePath.resolve(cwd, 'hello.gcda')]);
+		const test = parseGcov([nativePath.resolve(cwd, 'hello')]);
 
 		assert.equal(expected.length, test.length);
 		assert.equal(expected[0].fileC, test[0].fileC);
@@ -21,9 +21,9 @@ suite("Gcov", () => {
     test("Sample", () => {
 		const expected = parseLcov(nativePath.resolve(cwd, 'cob23203.info'));
 		const test = parseGcov([
-            nativePath.resolve(cwd, 'cob23203_1.gcda'),
-            nativePath.resolve(cwd, 'cob23203_2.gcda'),
-            nativePath.resolve(cwd, 'cob23203_0.gcda')
+            nativePath.resolve(cwd, 'cob23203_1'),
+            nativePath.resolve(cwd, 'cob23203_2'),
+            nativePath.resolve(cwd, 'cob23203_0')
         ]);
 
 		assert.equal(expected.length, test.length);

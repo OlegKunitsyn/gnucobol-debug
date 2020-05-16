@@ -1,3 +1,6 @@
+## 0.22.15
+* Support [GnuCOBOL Docker image](https://hub.docker.com/repository/docker/olegkunitsyn/gnucobol)
+
 ## 0.22.14
 * Fix failing on non-empty `cobc` output. [Issue #25](https://github.com/OlegKunitsyn/gnucobol-debug/issues/25)
 * Implement Code Coverage. [Issue #23](https://github.com/OlegKunitsyn/gnucobol-debug/issues/23)
