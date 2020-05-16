@@ -29,18 +29,18 @@ suite("C code parse", () => {
 		const cSubSubSample = nativePath.resolve(cwd, 'subsubsample.c');
 		const parsed = new SourceMap(cwd, [cSample, cSubSample, cSubSubSample]);
 
-		assert.equal(8, parsed.getLinesCount());
-		assert.equal(9, parsed.getVariablesCount());
+		assert.equal(7, parsed.getLinesCount());
+		assert.equal(14, parsed.getVariablesCount());
 
-		assert.equal('b_13', parsed.getVariableByCobol('sample.WS-GROUP').cName);
-		assert.equal('f_13', parsed.getVariableByCobol('sample.WS-GROUP.WS-GROUP').cName);
-		assert.equal('f_8', parsed.getVariableByCobol('subsample.WS-GROUP').cName);
-		assert.equal('f_13', parsed.getVariableByCobol('subsubsample.WS-GROUP-ALPHANUMERIC').cName);
+		assert.equal('b_11', parsed.getVariableByCobol('sample.WS-GROUP').cName);
+		assert.equal('f_11', parsed.getVariableByCobol('sample.WS-GROUP.WS-GROUP').cName);
+		assert.equal('f_6', parsed.getVariableByCobol('subsample.WS-GROUP').cName);
+		assert.equal('f_11', parsed.getVariableByCobol('subsubsample.WS-GROUP-ALPHANUMERIC').cName);
 		
-		assert.equal('WS-GROUP', parsed.getVariableByC('sample.WS-b_13').cName);
-		assert.equal('WS-GROUP', parsed.getVariableByC('sample.f_13').cName);
-		assert.equal('WS-GROUP', parsed.getVariableByC('subsample.f_8').cName);
-		assert.equal('WS-GROUP-ALPHANUMERIC', parsed.getVariableByC('subsubsample.f_13').cName);
+		assert.equal('WS-GROUP', parsed.getVariableByC('sample.b_11').cobolName);
+		assert.equal('WS-GROUP', parsed.getVariableByC('sample.f_11').cobolName);
+		assert.equal('WS-GROUP', parsed.getVariableByC('subsample.f_6').cobolName);
+		assert.equal('WS-GROUP-ALPHANUMERIC', parsed.getVariableByC('subsubsample.f_11').cobolName);
 	});
 	test("Variables Hierarchy", () => {
 		const c = nativePath.resolve(cwd, 'petstore.c');
