@@ -118,6 +118,12 @@ export class SourceMap {
 		return this.lines.some(e => e.fileC === fileC && e.lineC === lineC);
 	}
 
+	public hasLineC(fileCobol: string, lineCobol: number): boolean {
+		if (!nativePath.isAbsolute(fileCobol))
+			fileCobol = nativePath.join(this.cwd, fileCobol);
+		return this.lines.some(e => e.fileCobol === fileCobol && e.lineCobol === lineCobol);
+	}
+
 	public getLineC(fileCobol: string, lineCobol: number): Line {
 		if (!nativePath.isAbsolute(fileCobol))
 			fileCobol = nativePath.join(this.cwd, fileCobol);

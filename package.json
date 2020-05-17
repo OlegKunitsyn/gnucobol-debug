@@ -6,9 +6,10 @@
 		"cobol",
 		"gnucobol",
 		"debugger",
-		"debug"
+		"debug",
+		"code coverage"
 	],
-	"version": "0.22.13",
+	"version": "0.22.15",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -84,6 +85,11 @@
 								"description": "Path to gdb",
 								"default": "gdb"
 							},
+							"container": {
+								"type": "string",
+								"description": "Docker container name",
+								"default": null
+							},
 							"cobcpath": {
 								"type": "string",
 								"description": "Path to cobc",
@@ -107,6 +113,11 @@
 								"description": "Environment variables",
 								"default": null
 							},
+							"coverage": {
+								"type": "boolean",
+								"description": "Enable code coverage",
+								"default": true
+							},
 							"verbose": {
 								"type": "boolean",
 								"description": "Debug GDB",
@@ -129,7 +140,8 @@
 							"-free",
 							"-x"
 						],
-						"group": []
+						"group": [],
+						"coverage": true
 					}
 				]
 			}

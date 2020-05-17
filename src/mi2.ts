@@ -10,6 +10,7 @@ const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
 const dataValueRegex = /.*size\s\=\s(\d+).*?data\s=\s(.*),\sattr.*/i;
 const fieldValueRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
+const gcovRegex = /\"([0-9a-z_\-\/\s]+\.o)\"/gi;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -21,6 +22,7 @@ export function couldBeOutput(line: string) {
 
 export class MI2 extends EventEmitter implements IDebugger {
 	private map: SourceMap;
+	private gcovFiles: Set<string> = new Set<string>();
 	public procEnv: any;
 	private currentToken: number = 1;
 	private handlers: { [index: number]: (info: MINode) => any } = {};
@@ -28,10 +30,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private buffer: string;
 	private errbuf: string;
 	private process: ChildProcess.ChildProcess;
-	private gdbArgs: string[] = ["-q", "--interpreter=mi2"];
 	private lastStepCommand: Function;
 
-	constructor(public gdbpath: string, public cobcpath: string, public cobcver: number, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
+	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcver: number, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
 		if (procEnv) {
 			const env = {};
@@ -58,7 +59,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
-		if (this.verbose)
+		if (this.verbose && !this.noDebug)
 			this.log("stderr", `GnuCOBOL version: ${this.cobcver}`);
 
 		return new Promise((resolve, reject) => {
@@ -74,9 +75,29 @@ export class MI2 extends EventEmitter implements IDebugger {
 				return;
 			}
 
-			const args = this.cobcArgs.concat(['-g', '-fsource-location', '-ftraceall', target]).concat(group);
+			const args = this.cobcArgs.concat([
+				'-g',
+				'-fsource-location',
+				'-ftraceall',
+				'-Q',
+				'--coverage',
+				'-A',
+				'--coverage',
+				'-v',
+				target
+			]).concat(group);
 			const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
-			buildProcess.stderr.on("data", ((err) => { this.emit("launcherror", err); }).bind(this));
+			buildProcess.stderr.on('data', (data) => {
+				if (this.verbose)
+					this.log("stderr", data);
+				let match;
+				do {
+					match = gcovRegex.exec(data);
+					if (match) {
+						this.gcovFiles.add(match[1].split('.').slice(0, -1).join('.'));
+					}
+				} while (match);
+			});
 			buildProcess.on('exit', (code) => {
 				if (code !== 0) {
 					this.emit("quit");
@@ -272,7 +293,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 									else if (reason == "exited") { // exit with error code != 0
 										if (this.verbose)
 											this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
-										this.emit("exited-normally", parsed);
+										this.emit("quit", parsed);
 									} else {
 										if (this.verbose)
 											this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
@@ -752,5 +773,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 	isReady(): boolean {
 		return !!this.process;
+	}
+
+	getGcovFiles(): string[] {
+		return Array.from(this.gcovFiles);
+	}
+
+	getSourceMap(): SourceMap {
+		return this.map;
 	}
 }
