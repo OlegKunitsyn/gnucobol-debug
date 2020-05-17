@@ -1,3 +1,7 @@
+## 0.31.16
+* Show field's data instead of data. [Issue #4](https://github.com/OlegKunitsyn/gnucobol-debug/issues/4) by Bruno Pacheco
+* Compatibility with GnuCOBOL 3.1
+
 ## 0.22.15
 * Support [GnuCOBOL Docker image](https://hub.docker.com/repository/docker/olegkunitsyn/gnucobol)
 
