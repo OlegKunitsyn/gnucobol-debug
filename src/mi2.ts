@@ -1,4 +1,4 @@
-import { Breakpoint, IDebugger, MIError, Stack, Thread, Variable, VariableObject } from "./debugger";
+import { Breakpoint, IDebugger, MIError, Stack, Thread, DebuggerVariable, VariableObject } from "./debugger";
 import * as ChildProcess from "child_process";
 import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
@@ -8,6 +8,8 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
+const dataValueRegex = /.*size\s\=\s(\d+).*?data\s=\s(.*),\sattr.*/i;
+const fieldValueRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
 const gcovRegex = /\"([0-9a-z_\-\/\s]+\.o)\"/gi;
 
 export function escape(str: string) {
@@ -105,10 +107,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 				if (this.verbose)
 					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
 
-				this.map = new SourceMap(cwd, [target].concat(group));
+				try {
+					this.map = new SourceMap(cwd, [target].concat(group));
+				} catch (e) {
+					this.log('stderr', e);
+				}
 
 				if (this.verbose) {
-					this.log("stderr", `SourceMap created: lines ${this.map.getLinesCount()}, vars ${this.map.getVarsCount()}`);
 					this.log("stderr", this.map.toString());
 				}
 
@@ -208,7 +213,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	stdin(data: string) {
-		if (this.isReady) {
+		if (this.isReady()) {
 			if (this.verbose)
 				this.log("stderr", "stdin: " + data);
 			this.process.stdin.write(data + "\n");
@@ -343,8 +348,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 		this.process.on("exit", function (code) {
 			clearTimeout(to);
 		});
-		if (!!this.noDebug)
-			return;
 		this.sendCommand("gdb-exit");
 	}
 
@@ -608,29 +611,39 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async getStackVariables(thread: number, frame: number): Promise<Variable[]> {
+	async getCurrentSourceFile(): Promise<string> {
+		if (this.verbose)
+			this.log("stderr", "getCurrentSourceFile");
+		const response = await this.sendCommand(`stack-info-frame`);
+		const fileName = response.result("frame.file");
+		return fileName.substring(0, fileName.lastIndexOf(".c"));
+	}
+
+	async getStackVariables(thread: number, frame: number): Promise<DebuggerVariable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
-		const result = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
-		const variables = result.result("variables");
-		const ret: Variable[] = [];
+
+		const file = await this.getCurrentSourceFile();
+
+		const variablesResponse = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const variables = variablesResponse.result("variables");
+
+		const currentFrameVariables = new Set<DebuggerVariable>();
 		for (let element of variables) {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
 			const type = MINode.valueOf(element, "type");
 
-			if (!this.map.hasVarCobol(key)) {
-				continue;
-			}
+			const cobolVariable = this.map.getVariableByC(`${file}.${key}`);
 
-			ret.push({
-				name: this.map.getVarCobol(key),
-				valueStr: value,
-				type: type,
-				raw: element
-			});
+			if (cobolVariable) {
+				cobolVariable.type = type;
+				cobolVariable.value = value;
+				currentFrameVariables.add(cobolVariable.getDataStorage());
+			}
 		}
-		return ret;
+
+		return Array.from(currentFrameVariables);
 	}
 
 	examineMemory(from: number, length: number): Thenable<any> {
@@ -643,16 +656,50 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async evalExpression(name: string, thread: number, frame: number): Promise<MINode> {
+	async evalExpression(name: string, thread: number, frame: number): Promise<DebuggerVariable> {
 		if (this.verbose)
 			this.log("stderr", "evalExpression");
 		let command = "data-evaluate-expression ";
 		if (thread != 0) {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
-		command += this.map.getVarC(name);
 
-		return this.sendCommand(command);
+		const file = await this.getCurrentSourceFile();
+
+		const variable = this.map.getVariableByCobol(`${file}.${name}`);
+
+		command += variable.cName;
+
+		const response = await this.sendCommand(command);
+		let value = response.result("value");
+
+		if (value.startsWith("{")) {
+			const match = dataValueRegex.exec(value);
+			const size = parseInt(match[1]);
+			value = match[2];
+			value = value.substring(value.indexOf(" ") + 1);
+			if(value.startsWith("<")) {
+				value = value.substring(value.indexOf(" ") + 1);
+			}
+			if (value.startsWith("\"")) {
+				const fieldMatch = fieldValueRegex.exec(value);
+				if (fieldMatch) {
+					const fullSize = parseInt(fieldMatch[2]);
+					let suffix = "";
+					for (let i = 0; i < Math.min(fullSize, size); i++) {
+						suffix += fieldMatch[1];
+					}
+					value = value.replace(fieldValueRegex, suffix);
+				}
+				value = `"${value.substring(1, size + 1)}"`;
+			} else if (value.startsWith("'")) {
+				value = `${value.substring(0, 3)} repeats ${size} times`;
+			}
+		}
+
+		variable.value = value;
+
+		return variable;
 	}
 
 	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {

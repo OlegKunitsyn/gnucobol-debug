@@ -17,7 +17,7 @@ import * as systemPath from "path";
 import * as net from "net";
 import * as os from "os";
 import * as fs from "fs";
-import { MIError, Variable, VariableObject } from './debugger';
+import { DebuggerVariable, VariableObject } from './debugger';
 import { MINode } from './parser.mi2';
 import { MI2 } from './mi2';
 import { CoverageStatus } from './coverage';
@@ -380,7 +380,6 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
-		const variables: DebugProtocol.Variable[] = [];
 		let id: number | string | VariableObject | ExtendedVariable;
 		if (args.variablesReference < VAR_HANDLES_START) {
 			id = args.variablesReference - STACK_HANDLES_START;
@@ -388,86 +387,20 @@ export class GDBDebugSession extends DebugSession {
 			id = this.variableHandles.get(args.variablesReference);
 		}
 
-		const createVariable = (arg, options?) => {
-			if (options)
-				return this.variableHandles.create(new ExtendedVariable(arg, options));
-			else
-				return this.variableHandles.create(arg);
-		};
-
-		const findOrCreateVariable = (varObj: VariableObject): number => {
-			let id: number;
-			if (this.variableHandlesReverse.hasOwnProperty(varObj.name)) {
-				id = this.variableHandlesReverse[varObj.name];
-			} else {
-				id = createVariable(varObj);
-				this.variableHandlesReverse[varObj.name] = id;
-			}
-			return varObj.isCompound() ? id : 0;
-		};
-
 		if (typeof id == "number") {
-			let stack: Variable[];
 			try {
+				const variables: DebugProtocol.Variable[] = [];
 				const [threadId, level] = this.frameIdToThreadAndLevel(id);
-				stack = await this.miDebugger.getStackVariables(threadId, level);
-				for (const variable of stack) {
-					if (this.useVarObjects) {
-						try {
-							const varObjName = `var_${id}_${variable.name}`;
-							let varObj: VariableObject;
-							try {
-								const changes = await this.miDebugger.varUpdate(varObjName);
-								const changelist = changes.result("changelist");
-								changelist.forEach((change) => {
-									const name = MINode.valueOf(change, "name");
-									const vId = this.variableHandlesReverse[name];
-									const v = this.variableHandles.get(vId) as any;
-									v.applyChanges(change);
-								});
-								const varId = this.variableHandlesReverse[varObjName];
-								varObj = this.variableHandles.get(varId) as any;
-							} catch (err) {
-								if (err instanceof MIError && err.message == "Variable object not found") {
-									varObj = await this.miDebugger.varCreate(variable.name, varObjName);
-									const varId = findOrCreateVariable(varObj);
-									varObj.exp = variable.name;
-									varObj.id = varId;
-								} else {
-									throw err;
-								}
-							}
-							variables.push(varObj.toProtocolVariable());
-						} catch (err) {
-							variables.push({
-								name: variable.name,
-								value: `<${err}>`,
-								variablesReference: 0
-							});
-						}
-					} else {
-						if (variable.valueStr !== undefined) {
-							let expanded = expandValue(createVariable, `{${variable.name}=${variable.valueStr})`, "", variable.raw);
-							if (expanded) {
-								if (typeof expanded[0] == "string")
-									expanded = [
-										{
-											name: "Value",
-											value: prettyStringArray(expanded),
-											variablesReference: 0
-										}
-									];
-								variables.push(expanded[0]);
-							}
-						} else
-							variables.push({
-								name: variable.name,
-								type: variable.type,
-								value: variable.type,
-								variablesReference: createVariable(variable.name)
-							});
-					}
+				const stackVariables = await this.miDebugger.getStackVariables(threadId, level);
+				for (const stackVariable of stackVariables) {
+					variables.push({
+						name: stackVariable.cobolName,
+						type: stackVariable.type,
+						value: stackVariable.type,
+						variablesReference: this.variableHandles.create(stackVariable.cobolName)
+					});
 				}
+
 				response.body = {
 					variables: variables
 				};
@@ -476,118 +409,38 @@ export class GDBDebugSession extends DebugSession {
 				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
 			}
 		} else if (typeof id == "string") {
-			// Variable members
-			let variable;
 			try {
 				// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
-				variable = await this.miDebugger.evalExpression(JSON.stringify(id), 0, 0);
-				try {
-					let expanded = expandValue(createVariable, variable.result("value"), id, variable);
-					if (!expanded) {
-						this.sendErrorResponse(response, 2, `Could not expand variable`);
-					} else {
-						if (typeof expanded[0] == "string")
-							expanded = [
-								{
-									name: "Value",
-									value: prettyStringArray(expanded),
-									variablesReference: 0
-								}
-							];
-						response.body = {
-							variables: expanded
-						};
-						this.sendResponse(response);
+				const stackVariable = await this.miDebugger.evalExpression(id, 0, 0);
+
+				const variables: DebugProtocol.Variable[] = [];
+				if (stackVariable.hasChildren()) {
+					for (const child of stackVariable.children.values()) {
+						variables.push({
+							name: child.cobolName,
+							type: child.type,
+							value: child.type,
+							variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
+						});
 					}
-				} catch (e) {
-					this.sendErrorResponse(response, 2, `Could not expand variable: ${e}`);
+				} else {
+					variables.push({
+						name: 'Value',
+						type: stackVariable.type,
+						value: stackVariable.value,
+						variablesReference: 0
+					});
 				}
+				response.body = {
+					variables: variables
+				};
+				this.sendResponse(response);
 			} catch (err) {
 				this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
 			}
-		} else if (typeof id == "object") {
-			if (id instanceof VariableObject) {
-				// Variable members
-				let children: VariableObject[];
-				try {
-					children = await this.miDebugger.varListChildren(id.name);
-					const vars = children.map(child => {
-						child.id = findOrCreateVariable(child);
-						return child.toProtocolVariable();
-					});
-
-					response.body = {
-						variables: vars
-					};
-					this.sendResponse(response);
-				} catch (err) {
-					this.sendErrorResponse(response, 1, `Could not expand variable: ${err}`);
-				}
-			} else if (id instanceof ExtendedVariable) {
-				const varReq = id;
-				if (varReq.options.arg) {
-					const strArr = [];
-					let argsPart = true;
-					let arrIndex = 0;
-					const submit = () => {
-						response.body = {
-							variables: strArr
-						};
-						this.sendResponse(response);
-					};
-					const addOne = async () => {
-						// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
-						const variable = await this.miDebugger.evalExpression(JSON.stringify(`${varReq.name}+${arrIndex})`), 0, 0);
-						try {
-							const expanded = expandValue(createVariable, variable.result("value"), varReq.name, variable);
-							if (!expanded) {
-								this.sendErrorResponse(response, 15, `Could not expand variable`);
-							} else {
-								if (typeof expanded == "string") {
-									if (expanded == "<nullptr>") {
-										if (argsPart)
-											argsPart = false;
-										else
-											return submit();
-									} else if (expanded[0] != '"') {
-										strArr.push({
-											name: "[err]",
-											value: expanded,
-											variablesReference: 0
-										});
-										return submit();
-									}
-									strArr.push({
-										name: `[${(arrIndex++)}]`,
-										value: expanded,
-										variablesReference: 0
-									});
-									await addOne();
-								} else {
-									strArr.push({
-										name: "[err]",
-										value: expanded,
-										variablesReference: 0
-									});
-									submit();
-								}
-							}
-						} catch (e) {
-							this.sendErrorResponse(response, 14, `Could not expand variable: ${e}`);
-						}
-					};
-					await addOne();
-				} else
-					this.sendErrorResponse(response, 13, `Unimplemented variable request options: ${JSON.stringify(varReq.options)}`);
-			} else {
-				response.body = {
-					variables: id
-				};
-				this.sendResponse(response);
-			}
 		} else {
 			response.body = {
-				variables: variables
+				variables: []
 			};
 			this.sendResponse(response);
 		}
@@ -639,7 +492,7 @@ export class GDBDebugSession extends DebugSession {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
-					result: res.result("value")
+					result: res.value
 				};
 				this.sendResponse(response);
 			}, msg => {
@@ -683,243 +536,6 @@ export class GDBDebugSession extends DebugSession {
 	protected gotoRequest(response: DebugProtocol.GotoResponse, args: DebugProtocol.GotoArguments): void {
 		this.sendResponse(response);
 	}
-}
-
-function prettyStringArray(strings) {
-	if (typeof strings == "object") {
-		if (strings.length !== undefined)
-			return strings.join(", ");
-		else
-			return JSON.stringify(strings);
-	} else return strings;
-}
-
-function expandValue(variableCreate: Function, value: string, root: string = "", extra: any = undefined): any {
-	const parseCString = () => {
-		value = value.trim();
-		if (value[0] != '"' && value[0] != '\'')
-			return "";
-		let stringEnd = 1;
-		let inString = true;
-		const charStr = value[0];
-		let remaining = value.substr(1);
-		let escaped = false;
-		while (inString) {
-			if (escaped)
-				escaped = false;
-			else if (remaining[0] == '\\')
-				escaped = true;
-			else if (remaining[0] == charStr)
-				inString = false;
-
-			remaining = remaining.substr(1);
-			stringEnd++;
-		}
-		const str = value.substr(0, stringEnd).trim();
-		value = value.substr(stringEnd).trim();
-		return str;
-	};
-
-	const stack = [root];
-	let parseValue, parseCommaResult, parseCommaValue, parseResult, createValue;
-	let variable = "";
-
-	const getNamespace = (variable) => {
-		let namespace = "";
-		let prefix = "";
-		stack.push(variable);
-		stack.forEach(name => {
-			prefix = "";
-			if (name != "") {
-				if (name.startsWith("["))
-					namespace = namespace + name;
-				else {
-					if (namespace) {
-						while (name.startsWith("*")) {
-							prefix += "*";
-							name = name.substr(1);
-						}
-						namespace = namespace + pointerCombineChar + name;
-					} else
-						namespace = name;
-				}
-			}
-		});
-		stack.pop();
-		return prefix + namespace;
-	};
-
-	const parseTupleOrList = () => {
-		value = value.trim();
-		if (value[0] != '{')
-			return undefined;
-		const oldContent = value;
-		value = value.substr(1).trim();
-		if (value[0] == '}') {
-			value = value.substr(1).trim();
-			return [];
-		}
-		if (value.startsWith("...")) {
-			value = value.substr(3).trim();
-			if (value[0] == '}') {
-				value = value.substr(1).trim();
-				return <any>"<...>";
-			}
-		}
-		const eqPos = value.indexOf("=");
-		const newValPos1 = value.indexOf("{");
-		const newValPos2 = value.indexOf(",");
-		let newValPos = newValPos1;
-		if (newValPos2 != -1 && newValPos2 < newValPos1)
-			newValPos = newValPos2;
-		if (newValPos != -1 && eqPos > newValPos || eqPos == -1) { // is value list
-			const values = [];
-			stack.push("[0]");
-			let val = parseValue();
-			stack.pop();
-			values.push(createValue("[0]", val));
-			const remaining = value;
-			let i = 0;
-			while (true) {
-				stack.push("[" + (++i) + "]");
-				if (!(val = parseCommaValue())) {
-					stack.pop();
-					break;
-				}
-				stack.pop();
-				values.push(createValue("[" + i + "]", val));
-			}
-			value = value.substr(1).trim(); // }
-			return values;
-		}
-
-		let result = parseResult(true);
-		if (result) {
-			const results = [];
-			results.push(result);
-			while (result = parseCommaResult(true))
-				results.push(result);
-			value = value.substr(1).trim(); // }
-			return results;
-		}
-
-		return undefined;
-	};
-
-	const parsePrimitive = () => {
-		let primitive: any;
-		let match;
-		value = value.trim();
-		if (value.length == 0)
-			primitive = undefined;
-		else if (value.startsWith("true")) {
-			primitive = "true";
-			value = value.substr(4).trim();
-		} else if (value.startsWith("false")) {
-			primitive = "false";
-			value = value.substr(5).trim();
-		} else if (match = nullpointerRegex.exec(value)) {
-			primitive = "<nullptr>";
-			value = value.substr(match[0].length).trim();
-		} else if (match = referenceStringRegex.exec(value)) {
-			value = value.substr(match[1].length).trim();
-			primitive = parseCString();
-		} else if (match = referenceRegex.exec(value)) {
-			primitive = "*" + match[0];
-			value = value.substr(match[0].length).trim();
-		} else if (match = cppReferenceRegex.exec(value)) {
-			primitive = match[0];
-			value = value.substr(match[0].length).trim();
-		} else if (match = charRegex.exec(value)) {
-			primitive = match[1];
-			value = value.substr(match[0].length - 1);
-			primitive += " " + parseCString();
-		} else if (match = numberRegex.exec(value)) {
-			primitive = match[0];
-			value = value.substr(match[0].length).trim();
-		} else if (match = variableRegex.exec(value)) {
-			primitive = match[0];
-			value = value.substr(match[0].length).trim();
-		} else if (match = errorRegex.exec(value)) {
-			primitive = match[0];
-			value = value.substr(match[0].length).trim();
-		} else {
-			primitive = value;
-		}
-		return primitive;
-	};
-
-	parseValue = () => {
-		value = value.trim();
-		if (value[0] == '"')
-			return parseCString();
-		else if (value[0] == '{')
-			return parseTupleOrList();
-		else
-			return parsePrimitive();
-	};
-
-	parseResult = (pushToStack: boolean = false) => {
-		value = value.trim();
-		const variableMatch = resultRegex.exec(value);
-		if (!variableMatch)
-			return undefined;
-		value = value.substr(variableMatch[0].length).trim();
-		const name = variable = variableMatch[1];
-		if (pushToStack)
-			stack.push(variable);
-		const val = parseValue();
-		if (pushToStack)
-			stack.pop();
-		return createValue(name, val);
-	};
-
-	createValue = (name, val) => {
-		let ref = 0;
-		if (typeof val == "object") {
-			ref = variableCreate(val);
-			val = "Object";
-		} else if (typeof val == "string" && val.startsWith("*0x")) {
-			if (extra && MINode.valueOf(extra, "arg") == "1") {
-				ref = variableCreate(getNamespace("*(" + name), { arg: true });
-				val = "<args>";
-			} else {
-				ref = variableCreate(getNamespace("*" + name));
-				val = "Object@" + val;
-			}
-		} else if (typeof val == "string" && val.startsWith("@0x")) {
-			ref = variableCreate(getNamespace("*&" + name.substr));
-			val = "Ref" + val;
-		} else if (typeof val == "string" && val.startsWith("<...>")) {
-			ref = variableCreate(getNamespace(name));
-			val = "...";
-		}
-		return {
-			name: name,
-			value: val,
-			variablesReference: ref
-		};
-	};
-
-	parseCommaValue = () => {
-		value = value.trim();
-		if (value[0] != ',')
-			return undefined;
-		value = value.substr(1).trim();
-		return parseValue();
-	};
-
-	parseCommaResult = (pushToStack: boolean = false) => {
-		value = value.trim();
-		if (value[0] != ',')
-			return undefined;
-		value = value.substr(1).trim();
-		return parseResult(pushToStack);
-	};
-
-
-	value = value.trim();
-	return parseValue();
 }
 
 DebugSession.run(GDBDebugSession);

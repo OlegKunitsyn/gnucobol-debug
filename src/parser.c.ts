@@ -1,8 +1,10 @@
 import * as readline from "n-readlines";
 import * as nativePath from "path";
+import { DebuggerVariable } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const varRegex = /static\s+cob_u8_t\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{[0-9]+\,\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
 const replaceRegex = /\"/gi;
@@ -23,22 +25,12 @@ export class Line {
 	}
 }
 
-export class Variable {
-	varCobol: string;
-	varC: string;
-	constructor(varCobol: string, varC: string) {
-		this.varCobol = varCobol;
-		this.varC = varC;
-	}
-	public toString(): string {
-		return `${this.varCobol} > ${this.varC}`;
-	}
-}
-
 export class SourceMap {
 	private cwd: string;
 	private lines: Line[] = new Array<Line>();
-	private vars: Variable[] = new Array<Variable>();
+	private variablesByCobol = new Map<string, DebuggerVariable>();
+	private variablesByC = new Map<string, DebuggerVariable>();
+
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
 		filesCobol.forEach(e => {
@@ -49,12 +41,17 @@ export class SourceMap {
 	private parse(fileC: string): void {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.resolve(this.cwd, fileC);
-		let line = 0;
+		
+		const basename = nativePath.basename(fileC);
+		const cleanedFile = basename.substring(0, basename.lastIndexOf(".c.l.h"));
+
+		let lineNumber = 0;
 		let reader = new readline(fileC);
-		let row: string;
+		let row: false | Buffer;
 		let fileCobol: string;
 		while (row = reader.next()) {
-			let match = fileCobolRegex.exec(row);
+			let line = row.toString();
+			let match = fileCobolRegex.exec(line);
 			if (match) {
 				if (!nativePath.isAbsolute(match[1])) {
 					fileCobol = nativePath.resolve(this.cwd, match[1]);
@@ -62,22 +59,37 @@ export class SourceMap {
 					fileCobol = match[1];
 				}
 			}
-			match = procedureRegex.exec(row);
+			match = procedureRegex.exec(line);
 			if (match) {
 				if (this.lines.length > 0 && this.lines[this.lines.length - 1].fileCobol === fileCobol && this.lines[this.lines.length - 1].lineCobol === parseInt(match[1])) {
 					this.lines.pop();
 				}
-				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, line + 2));
+				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
 			}
-			match = varRegex.exec(row);
+			match = dataStorageRegex.exec(line);
 			if (match) {
-				this.vars.push(new Variable(match[2], match[1]));
+				const dataStorage = new DebuggerVariable(match[2], match[1]);
+				this.variablesByC.set(`${cleanedFile}.${dataStorage.cName}`, dataStorage);
+				this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}`, dataStorage);
 			}
-			match = fileIncludeRegex.exec(row);
+			match = fieldRegex.exec(line);
+			if (match) {
+				const field = new DebuggerVariable(match[3], match[1]);
+				this.variablesByC.set(`${cleanedFile}.${field.cName}`, field);
+
+				const dataStorage = this.variablesByC.get(`${cleanedFile}.${match[2]}`);
+				if (dataStorage) {
+					dataStorage.addChild(field);
+					this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}.${field.cobolName}`, field);
+				} else {
+					this.variablesByCobol.set(`${cleanedFile}.${field.cobolName}`, field);
+				}
+			}
+			match = fileIncludeRegex.exec(line);
 			if (match) {
 				this.parse(match[1]);
 			}
-			line++;
+			lineNumber++;
 		}
 	}
 
@@ -85,12 +97,19 @@ export class SourceMap {
 		return this.lines.length;
 	}
 
-	public getVarsCount(): number {
-		return this.vars.length;
+	public getVariablesCount(): number {
+		return this.variablesByC.size;
 	}
 
-	public hasVarCobol(varC: string): boolean {
-		return this.vars.some(e => e.varC === varC);
+	public getVariableByC(varC: string): DebuggerVariable {
+		if (this.variablesByC.has(varC)) {
+			return this.variablesByC.get(varC);
+		}
+		return null;
+	}
+
+	public getVariableByCobol(path: string): DebuggerVariable {
+		return this.variablesByCobol.get(path);
 	}
 
 	public hasLineCobol(fileC: string, lineC: number): boolean {
@@ -105,15 +124,6 @@ export class SourceMap {
 		return this.lines.some(e => e.fileCobol === fileCobol && e.lineCobol === lineCobol);
 	}
 
-	public getVarCobol(varC: string): string {
-		return this.vars.find(e => e.varC === varC)?.varCobol;
-	}
-
-	public getVarC(varCobol: string): string {
-		varCobol = varCobol.replace(replaceRegex, '');
-		return this.vars.find(e => e.varCobol === varCobol)?.varC;
-	}
-
 	public getLineC(fileCobol: string, lineCobol: number): Line {
 		if (!nativePath.isAbsolute(fileCobol))
 			fileCobol = nativePath.join(this.cwd, fileCobol);
@@ -126,26 +136,17 @@ export class SourceMap {
 		return this.lines.find(e => e.fileC === fileC && e.lineC === lineC) ?? new Line('', 0, '', 0);
 	}
 
-	public getNextStep(fileC: string, lineC: number): Line {
-		let result = null;
-		const idx = this.lines.findIndex(e => e.fileC === fileC && e.lineC === lineC) + 1;
-		if (idx < this.lines.length) {
-			let line = this.getLineC(this.lines[idx].fileCobol, this.lines[idx].lineCobol);
-			if (line.lineC > 0) {
-				result = line;
-			}
-		}
-		return result;
-	}
-
 	public toString(): string {
-		let out = '';
+		let out = `SourceMap created: lines ${this.lines.length}, vars ${this.variablesByC.size}\n`;
+
 		this.lines.forEach(e => {
 			out += e.toString() + "\n";
 		});
-		this.vars.forEach(e => {
-			out += e.toString() + "\n";
+
+		this.variablesByCobol.forEach((value, key) => {
+			out += `${key} > ${value.cName}\n`;
 		});
+
 		return out;
 	}
 }
