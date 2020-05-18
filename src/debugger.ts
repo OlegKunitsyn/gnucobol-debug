@@ -40,7 +40,7 @@ export enum VariableType {
 	'0x19' = 'number',
 	'0x1A' = 'number',
 	'0x1B' = 'number',
-	'0x24' = 'number',
+	'0x24' = 'string',
 	'0x20' = 'string',
 	'0x21' = 'string',
 	'0x22' = 'string',
@@ -64,8 +64,12 @@ export class Attribute {
 			const wholeNumber = valueStr.substring(0, valueStr.length - this.scale);
 			const decimals = valueStr.substring(valueStr.length - this.scale);
 			let numericValue = `${wholeNumber}`;
-			if (decimals.length > 0) {
+			if(decimals.length > 0) {
 				numericValue = `${wholeNumber}.${decimals}`;
+			}
+			const sign = numericValue.charCodeAt(numericValue.length - 1);
+			if(sign >= 112) {
+				numericValue = `-${numericValue.substring(0, numericValue.length - 1)}${sign - 112}`;
 			}
 			return `${parseFloat(numericValue)}`;
 		}

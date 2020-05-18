@@ -691,9 +691,18 @@ export class MI2 extends EventEmitter implements IDebugger {
 					}
 					value = value.replace(fieldValueRegex, suffix);
 				}
-				value = `"${value.substring(1, size + 1)}"`;
+				value = `"${value.substring(1, size + 1).trim()}"`;
 			} else if (value.startsWith("'")) {
-				value = `${value.substring(0, 3)} repeats ${size} times`;
+				const tempValue = value.substring(1, 2).trim();
+				if (tempValue === "0") {
+					let numericValue = "";
+					for (let i = 0; i < size; i++) {
+						numericValue += tempValue;
+					}
+					value = numericValue;
+				} else {
+					value = `'${tempValue}' repeats ${size} times`;
+				}
 			}
 		}
 
