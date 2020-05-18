@@ -24,12 +24,63 @@ export interface Stack {
 	line: number;
 }
 
+export enum VariableType {
+	'0x00' = 'unknown',
+	'0x01' = 'group',
+	'0x02' = 'boolean',
+	'0x10' = 'number',
+	'0x11' = 'number',
+	'0x12' = 'number',
+	'0x13' = 'number',
+	'0x14' = 'number',
+	'0x15' = 'number',
+	'0x16' = 'number',
+	'0x17' = 'number',
+	'0x18' = 'number',
+	'0x19' = 'number',
+	'0x1A' = 'number',
+	'0x1B' = 'number',
+	'0x24' = 'number',
+	'0x20' = 'string',
+	'0x21' = 'string',
+	'0x22' = 'string',
+	'0x23' = 'string',
+	'0x40' = 'string',
+	'0x41' = 'string'
+}
+
+export class Attribute {
+	public constructor(
+		public type: string,
+		public digits: number,
+		public scale: number) { }
+
+	public parse(valueStr: string): string {
+		if (!valueStr) {
+			return valueStr;
+		}
+		if (this.type === 'number') {
+			valueStr = valueStr.substring(1, valueStr.length - 1);
+			const wholeNumber = valueStr.substring(0, valueStr.length - this.scale);
+			const decimals = valueStr.substring(valueStr.length - this.scale);
+			let numericValue = `${wholeNumber}`;
+			if (decimals.length > 0) {
+				numericValue = `${wholeNumber}.${decimals}`;
+			}
+			return `${parseFloat(numericValue)}`;
+		}
+		return valueStr;
+	}
+}
+
 export class DebuggerVariable {
 
 	public constructor(
 		public cobolName: string,
 		public cName: string,
-		public type: string = null,
+		public sourceFile: string,
+		public attribute: Attribute = null,
+		public size: number = null,
 		public value: string = null,
 		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
@@ -56,7 +107,7 @@ export class DebuggerVariable {
 	}
 
 	public getDataStorage(): DebuggerVariable {
-		if(this.parent) {
+		if (this.parent) {
 			return this.parent.getDataStorage();
 		}
 		return this;
@@ -64,6 +115,16 @@ export class DebuggerVariable {
 
 	public hasChildren(): boolean {
 		return this.children.size > 0;
+	}
+
+	public setType(type: string): void {
+		if(!this.attribute) {
+			this.attribute = new Attribute(type, 0, 0);
+		}
+	}
+
+	public setValue(value: string): void {
+		this.value = this.attribute.parse(value);
 	}
 }
 

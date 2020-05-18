@@ -637,8 +637,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const cobolVariable = this.map.getVariableByC(`${file}.${key}`);
 
 			if (cobolVariable) {
-				cobolVariable.type = type;
-				cobolVariable.value = value;
+				cobolVariable.setType(type);
+				cobolVariable.setValue(value);
 				currentFrameVariables.add(cobolVariable.getDataStorage());
 			}
 		}
@@ -678,7 +678,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const size = parseInt(match[1]);
 			value = match[2];
 			value = value.substring(value.indexOf(" ") + 1);
-			if(value.startsWith("<")) {
+			if (value.startsWith("<")) {
 				value = value.substring(value.indexOf(" ") + 1);
 			}
 			if (value.startsWith("\"")) {
@@ -697,7 +697,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			}
 		}
 
-		variable.value = value;
+		variable.setValue(value);
 
 		return variable;
 	}

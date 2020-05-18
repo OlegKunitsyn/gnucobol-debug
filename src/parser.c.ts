@@ -1,13 +1,13 @@
 import * as readline from "n-readlines";
 import * as nativePath from "path";
-import { DebuggerVariable } from "./debugger";
+import { DebuggerVariable, Attribute, VariableType } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
+const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*(\d*),\s*(\d*),.*/i;
 const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
-const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{[0-9]+\,\s+([0-9a-z_]+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
-const replaceRegex = /\"/gi;
 
 export class Line {
 	fileCobol: string;
@@ -30,6 +30,7 @@ export class SourceMap {
 	private lines: Line[] = new Array<Line>();
 	private variablesByCobol = new Map<string, DebuggerVariable>();
 	private variablesByC = new Map<string, DebuggerVariable>();
+	private attributes = new Map<string, Attribute>();
 
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
@@ -43,7 +44,7 @@ export class SourceMap {
 			fileC = nativePath.resolve(this.cwd, fileC);
 		
 		const basename = nativePath.basename(fileC);
-		const cleanedFile = basename.substring(0, basename.lastIndexOf(".c.l.h"));
+		const cleanedFile = basename.substring(0, basename.lastIndexOf(".c"));
 
 		let lineNumber = 0;
 		let reader = new readline(fileC);
@@ -66,18 +67,24 @@ export class SourceMap {
 				}
 				this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
 			}
+			match = attributeRegex.exec(line);
+			if (match) {
+				const attribute = new Attribute(VariableType[match[2]], parseInt(match[3]), parseInt(match[4]));
+				this.attributes.set(`${cleanedFile}.${match[1]}`, attribute);
+			}
 			match = dataStorageRegex.exec(line);
 			if (match) {
-				const dataStorage = new DebuggerVariable(match[2], match[1]);
+				const dataStorage = new DebuggerVariable(match[2], match[1], cleanedFile);
 				this.variablesByC.set(`${cleanedFile}.${dataStorage.cName}`, dataStorage);
 				this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}`, dataStorage);
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
-				const field = new DebuggerVariable(match[3], match[1]);
+				const attribute = this.attributes.get(`${cleanedFile}.${match[4]}`);
+				const field = new DebuggerVariable(match[5], match[1], cleanedFile, attribute, parseInt(match[2]));
 				this.variablesByC.set(`${cleanedFile}.${field.cName}`, field);
 
-				const dataStorage = this.variablesByC.get(`${cleanedFile}.${match[2]}`);
+				const dataStorage = this.variablesByC.get(`${cleanedFile}.${match[3]}`);
 				if (dataStorage) {
 					dataStorage.addChild(field);
 					this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}.${field.cobolName}`, field);
