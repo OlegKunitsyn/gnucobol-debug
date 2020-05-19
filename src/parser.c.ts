@@ -4,7 +4,7 @@ import { DebuggerVariable, Attribute, VariableType } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
 const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*(\d*),\s*(\d*),.*/i;
-const dataStorageRegex = /static\s+.*\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s]+)\s+\*\//i;
@@ -74,7 +74,7 @@ export class SourceMap {
 			}
 			match = dataStorageRegex.exec(line);
 			if (match) {
-				const dataStorage = new DebuggerVariable(match[2], match[1], cleanedFile);
+				const dataStorage = new DebuggerVariable(match[3], match[2], cleanedFile, new Attribute(VariableType[match[1]], 0, 0));
 				this.variablesByC.set(`${cleanedFile}.${dataStorage.cName}`, dataStorage);
 				this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}`, dataStorage);
 			}
@@ -98,6 +98,10 @@ export class SourceMap {
 			}
 			lineNumber++;
 		}
+	}
+
+	public getVariablesByC(): IterableIterator<DebuggerVariable> {
+		return this.variablesByC.values();
 	}
 
 	public getLinesCount(): number {
