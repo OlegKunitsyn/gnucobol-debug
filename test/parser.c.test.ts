@@ -51,4 +51,20 @@ suite("C code parse", () => {
 		assert.equal('WS-BILL', parsed.getVariableByC('petstore.b_14').cobolName);
 		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('petstore.f_15').cobolName);
 	});
+	test("Attributes", () => {
+		const c = nativePath.resolve(cwd, 'datatypes.c');
+		const parsed = new SourceMap(cwd, [c]);
+
+		for(let variable of parsed.getVariablesByC()) {
+			assert.notEqual(variable.attribute, null);
+			assert.notEqual(variable.attribute.type, null);
+			assert.notEqual(variable.attribute.digits, null);
+			assert.notEqual(variable.attribute.scale, null);
+		}
+
+		const variable = parsed.getVariableByCobol('datatypes.WS-GROUP.WS-UNSIGNED-DECIMAL');
+		assert.equal('Numeric', variable.attribute.type);
+		assert.equal(5, variable.attribute.digits);
+		assert.equal(2, variable.attribute.scale);
+	});
 });

@@ -8,8 +8,6 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
-const dataValueRegex = /.*size\s\=\s(\d+).*?data\s=\s(.*),\sattr.*/i;
-const fieldValueRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
 const gcovRegex = /\"([0-9a-z_\-\/\s]+\.o)\"/gi;
 
 export function escape(str: string) {
@@ -632,13 +630,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 		for (let element of variables) {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
-			const type = MINode.valueOf(element, "type");
 
 			const cobolVariable = this.map.getVariableByC(`${file}.${key}`);
 
 			if (cobolVariable) {
-				cobolVariable.type = type;
-				cobolVariable.value = value;
+				cobolVariable.setValue(value);
 				currentFrameVariables.add(cobolVariable.getDataStorage());
 			}
 		}
@@ -671,33 +667,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 		command += variable.cName;
 
 		const response = await this.sendCommand(command);
+
 		let value = response.result("value");
-
-		if (value.startsWith("{")) {
-			const match = dataValueRegex.exec(value);
-			const size = parseInt(match[1]);
-			value = match[2];
-			value = value.substring(value.indexOf(" ") + 1);
-			if(value.startsWith("<")) {
-				value = value.substring(value.indexOf(" ") + 1);
-			}
-			if (value.startsWith("\"")) {
-				const fieldMatch = fieldValueRegex.exec(value);
-				if (fieldMatch) {
-					const fullSize = parseInt(fieldMatch[2]);
-					let suffix = "";
-					for (let i = 0; i < Math.min(fullSize, size); i++) {
-						suffix += fieldMatch[1];
-					}
-					value = value.replace(fieldValueRegex, suffix);
-				}
-				value = `"${value.substring(1, size + 1)}"`;
-			} else if (value.startsWith("'")) {
-				value = `${value.substring(0, 3)} repeats ${size} times`;
-			}
-		}
-
-		variable.value = value;
+		variable.setValue(value);
 
 		return variable;
 	}

@@ -24,12 +24,134 @@ export interface Stack {
 	line: number;
 }
 
+export enum VariableType {
+	'0x00' = 'Unknown',
+	'0x01' = 'Group',
+	'0x02' = 'Boolean',
+	'0x10' = 'Numeric',
+	'0x11' = 'Numeric',
+	'0x12' = 'Numeric',
+	'0x13' = 'Numeric',
+	'0x14' = 'Numeric',
+	'0x15' = 'Numeric',
+	'0x16' = 'Numeric',
+	'0x17' = 'Numeric',
+	'0x18' = 'Numeric',
+	'0x19' = 'Numeric',
+	'0x1A' = 'Numeric',
+	'0x1B' = 'Numeric',
+	'0x24' = 'Numeric edited',
+	'0x20' = 'Alphanumeric',
+	'0x21' = 'Alphanumeric',
+	'0x22' = 'Alphanumeric',
+	'0x23' = 'Alphanumeric edited',
+	'0x40' = 'National',
+	'0x41' = 'National edited',
+	'int' = 'Numeric',
+	'cob_u8_t' = 'Group'
+}
+
+const dataValueRegex = /.*size\s\=\s(\d+).*?data\s=\s(.*),\sattr.*/i;
+const repeatTimeRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
+export class CobolFieldDataParser {
+
+	public static parse(valueStr: string): string {
+		let value = valueStr;
+		const match = dataValueRegex.exec(value);
+		const size = parseInt(match[1]);
+		
+		value = match[2].trim();
+		if(value.indexOf(" ") === -1) {
+			return null;
+		}
+		
+		value = value.substring(value.indexOf(" ") + 1);
+		if (value.startsWith("<")) {
+			if(value.indexOf(" ") === -1) {
+				return null;
+			}
+			value = value.substring(value.indexOf(" ") + 1);
+		}
+
+		if (value.startsWith("\"")) {
+			const fieldMatch = repeatTimeRegex.exec(value);
+			if (fieldMatch) {
+				const fullSize = parseInt(fieldMatch[2]);
+				let suffix = "";
+				for (let i = 0; i < Math.min(fullSize, size); i++) {
+					suffix += fieldMatch[1];
+				}
+				value = value.replace(repeatTimeRegex, suffix);
+			}
+			value = `"${value.substring(1, size + 1).trim()}"`;
+		} else if (value.startsWith("'")) {
+			const tempValue = value.substring(1, 2).trim();
+			if (tempValue === "0") {
+				let numericValue = "";
+				for (let i = 0; i < size; i++) {
+					numericValue += tempValue;
+				}
+				value = `"${numericValue}"`;
+			} else {
+				value = `'${tempValue}' repeats ${size} times`;
+			}
+		}
+		return value;
+	}
+}
+
+export class NumericValueParser {
+
+	private static SIGN_CHAR_CODE = 112;
+
+	public static parse(valueStr: string, scale: number): string {
+		let value = valueStr;
+		if (value.startsWith('"')) {
+			value = value.substring(1, value.length - 1);
+			const wholeNumber = value.substring(0, value.length - scale);
+			const decimals = value.substring(value.length - scale);
+			let numericValue = `${wholeNumber}`;
+			if (decimals.length > 0) {
+				numericValue = `${wholeNumber}.${decimals}`;
+			}
+			const sign = numericValue.charCodeAt(numericValue.length - 1);
+			if (sign >= this.SIGN_CHAR_CODE) {
+				numericValue = `-${numericValue.substring(0, numericValue.length - 1)}${sign - this.SIGN_CHAR_CODE}`;
+			}
+			return `${parseFloat(numericValue)}`;
+		}
+		return value;
+	}
+}
+
+export class Attribute {
+	public constructor(
+		public type: string,
+		public digits: number,
+		public scale: number) { }
+
+	public parse(valueStr: string): string {
+		if (!valueStr) {
+			return valueStr;
+		}
+		if (valueStr.startsWith("{")) {
+			valueStr = CobolFieldDataParser.parse(valueStr);
+		}
+		if (this.type === 'Numeric') {
+			return NumericValueParser.parse(valueStr, this.scale);
+		}
+		return valueStr;
+	}
+}
+
 export class DebuggerVariable {
 
 	public constructor(
 		public cobolName: string,
 		public cName: string,
-		public type: string = null,
+		public sourceFile: string,
+		public attribute: Attribute = null,
+		public size: number = null,
 		public value: string = null,
 		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
@@ -56,7 +178,7 @@ export class DebuggerVariable {
 	}
 
 	public getDataStorage(): DebuggerVariable {
-		if(this.parent) {
+		if (this.parent) {
 			return this.parent.getDataStorage();
 		}
 		return this;
@@ -64,6 +186,16 @@ export class DebuggerVariable {
 
 	public hasChildren(): boolean {
 		return this.children.size > 0;
+	}
+
+	public setType(type: string): void {
+		if (!this.attribute) {
+			this.attribute = new Attribute(type, 0, 0);
+		}
+	}
+
+	public setValue(value: string): void {
+		this.value = this.attribute.parse(value);
 	}
 }
 
