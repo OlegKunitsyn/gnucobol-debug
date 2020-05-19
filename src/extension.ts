@@ -48,17 +48,6 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
             config.cobcargs = ['exec', '-i', config.container, 'cobc'].concat(config.cobcargs);
             config.gdbargs = ['exec', '-i', config.container, 'gdb'].concat(config.gdbargs);
         }
-        
-        const process = ChildProcess.spawnSync(config.cobcpath, config.cobcargs.concat(['-V']), { cwd: config.wd, env: config.procEnv });
-        if (process.status === 0) {
-            const match = /cobc\s\(GnuCOBOL\)\s([0-9]+)/ig.exec(process.stdout.toString());
-            if (match) {
-                config.cobcver = parseInt(match[1]);
-            }
-        } else {
-            vscode.window.showErrorMessage(`${process.error?.message ?? process.output?.join(' ')} when executing '${config.cobcpath} ${config.cobcargs.concat(['-V']).join(' ')}'`);
-        }
-
         return config;
     }
 }
