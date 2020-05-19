@@ -9,7 +9,7 @@
 		"debug",
 		"code coverage"
 	],
-	"version": "0.22.15",
+	"version": "0.31.17",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -18,7 +18,9 @@
 	},
 	"main": "./out/src/extension",
 	"activationEvents": [
-		"onDebugResolve"
+		"onDebugResolve",
+		"onCommand:gnucobol-debug.containerStart",
+		"onCommand:gnucobol-debug.containerStop"
 	],
 	"categories": [
 		"Debuggers"
@@ -28,6 +30,16 @@
 		"url": "https://github.com/OlegKunitsyn/gnucobol-debug.git"
 	},
 	"contributes": {
+		"commands": [
+			{
+				"command": "gnucobol-debug.containerStart",
+				"title": "GnuCOBOL Docker: start"
+			},
+			{
+				"command": "gnucobol-debug.containerStop",
+				"title": "GnuCOBOL Docker: stop"
+			}
+		],
 		"breakpoints": [
 			{
 				"language": "cobol"
