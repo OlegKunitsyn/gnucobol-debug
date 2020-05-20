@@ -3,7 +3,7 @@ import * as nativePath from "path";
 import { DebuggerVariable, Attribute, VariableType } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*(\d*),\s*(\d*),.*/i;
+const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*([0-9-]*),\s*([0-9-]*),.*/i;
 const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
