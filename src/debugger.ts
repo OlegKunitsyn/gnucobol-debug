@@ -102,21 +102,38 @@ export class CobolFieldDataParser {
 
 export class NumericValueParser {
 
-	private static SIGN_CHAR_CODE = 112;
+	private static ZERO_SIGN_CHAR_CODE = 112;
 
 	public static parse(valueStr: string, scale: number): string {
 		let value = valueStr;
 		if (value.startsWith('"')) {
 			value = value.substring(1, value.length - 1);
+			const signCharCode = value.charCodeAt(value.length - 1);
+			let sign = "";
+			if (signCharCode >= this.ZERO_SIGN_CHAR_CODE) {
+				sign = "-";
+				value = `${value.substring(0, value.length - 1)}${signCharCode - this.ZERO_SIGN_CHAR_CODE}`
+			}
+			if(value.length < scale) {
+				const diff = scale - value.length;
+				let prefix = "";
+				for (let i = 0; i < diff; i++) {
+					prefix += "0";
+				}
+				value = prefix + value;
+			} else if(scale < 0) {
+				const diff = scale * -1;
+				let suffix = "";
+				for (let i = 0; i < diff; i++) {
+					suffix += "0";
+				}
+				value += suffix;
+			}
 			const wholeNumber = value.substring(0, value.length - scale);
 			const decimals = value.substring(value.length - scale);
-			let numericValue = `${wholeNumber}`;
+			let numericValue = `${sign}${wholeNumber}`;
 			if (decimals.length > 0) {
-				numericValue = `${wholeNumber}.${decimals}`;
-			}
-			const sign = numericValue.charCodeAt(numericValue.length - 1);
-			if (sign >= this.SIGN_CHAR_CODE) {
-				numericValue = `-${numericValue.substring(0, numericValue.length - 1)}${sign - this.SIGN_CHAR_CODE}`;
+				numericValue = `${numericValue}.${decimals}`;
 			}
 			return `${parseFloat(numericValue)}`;
 		}

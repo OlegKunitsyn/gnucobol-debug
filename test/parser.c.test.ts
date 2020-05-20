@@ -62,9 +62,9 @@ suite("C code parse", () => {
 			assert.notEqual(variable.attribute.scale, null);
 		}
 
-		const variable = parsed.getVariableByCobol('datatypes.WS-GROUP.WS-UNSIGNED-DECIMAL');
+		const variable = parsed.getVariableByCobol('datatypes.numeric-data.disppp');
 		assert.equal('Numeric', variable.attribute.type);
-		assert.equal(5, variable.attribute.digits);
-		assert.equal(2, variable.attribute.scale);
+		assert.equal(8, variable.attribute.digits);
+		assert.equal(-4, variable.attribute.scale);
 	});
 });

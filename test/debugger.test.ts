@@ -67,4 +67,14 @@ suite("Debugger", () => {
 		const parsed = NumericValueParser.parse(cobFieldValue, 3);
 		assert.equal(parsed, "-99.55");
 	});
+	test("It can parse signed decimal numeric value with big scale", () => {
+		const cobFieldValue = "\"123v\"";
+		const parsed = NumericValueParser.parse(cobFieldValue, 8);
+		assert.equal(parsed, "-0.00001236");
+	});
+	test("It can parse signed decimal numeric value with negative scale", () => {
+		const cobFieldValue = "\"123v\"";
+		const parsed = NumericValueParser.parse(cobFieldValue, -4);
+		assert.equal(parsed, "-12360000");
+	});
 });
