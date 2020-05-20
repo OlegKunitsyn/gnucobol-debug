@@ -110,13 +110,13 @@ export class GDBDebugSession extends DebugSession {
 				});
 			});
 			this.commandServer.on("error", err => {
-				this.handleMsg("stderr", "WARNING: Utility Command Server: Error in command socket " + err.toString() + "\nWARNING: The examine memory location command won't work");
+				this.handleMsg("stderr", "Socket error: " + err.toString());
 			});
 			if (!fs.existsSync(systemPath.join(os.tmpdir(), "gnucobol-debug-sockets")))
 				fs.mkdirSync(systemPath.join(os.tmpdir(), "gnucobol-debug-sockets"));
 			this.commandServer.listen(this.serverPath = systemPath.join(os.tmpdir(), "gnucobol-debug-sockets", ("Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)).toLowerCase()));
 		} catch (e) {
-			this.handleMsg("stderr", "WARNING: Utility Command Server: Failed to start " + e.toString() + "\nWARNING: The examine memory location command won't work");
+			this.handleMsg("stderr", "Failed to start: " + e.toString());
 		}
 
 		this.quit = false;
