@@ -8,7 +8,7 @@ import { SourceMap } from "./parser.c";
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
-const gcovRegex = /\"([0-9a-z_\-\/\s]+\.o)\"/gi;
+const gcovRegex = /\"([0-9a-z_\-\/\s\\:]+\.o)\"/gi;
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
