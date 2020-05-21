@@ -135,7 +135,6 @@ docker rm --force gnucobol
 
 ### Roadmap
 - Mac
-- Windows
 - Unit testing
 
 Your contribution is always welcome!
@@ -164,3 +163,13 @@ Add `verbose` property to your `launch.json` and start debugging session. In `DE
 }
 ```
 
+### Development
+* Fork the repository.
+* Clone it to your machine and open with VS Code.
+* Install dependencies by `npm install` command in the terminal.
+* Pick `Extension` from the dropdown on the Debug pane and press `F5`. This will open new VS Code instance with your cloned extension in debugging mode.
+* Follow Requirements and Usage sections above.
+* In the first VS Code instance you may put breakpoints to explore the functionality.
+* Stop the second VS Code instance and implement your idea in TypeScript.
+* Pick `Tests` from the dropdown on the Debug pane and press `F5`. Keep them green.
+* Push your changes and create Pull Request to the original repository.
