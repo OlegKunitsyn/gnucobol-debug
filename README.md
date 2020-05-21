@@ -2,20 +2,20 @@
   <br>
     <img src="https://github.com/OlegKunitsyn/gnucobol-debug/blob/master/icon.png?raw=true" alt="logo" width="200">
   <br>
-  VS Code Debugger for GnuCOBOL
+  Debugger for GnuCOBOL
   <br>
   <br>
 </h1>
 
-<h4 align="center">Debug COBOL code from VS Code.</h4>
+<h4 align="center">Debug COBOL code from VS Code or VSCodium.</h4>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug"><img src="https://vsmarketplacebadge.apphb.com/version/OlegKunitsyn.gnucobol-debug.svg?label=Debugger%20for%20GnuCOBOL" /></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug"><img src="https://vsmarketplacebadge.apphb.com/downloads-short/OlegKunitsyn.gnucobol-debug.svg?label=Downloads" /></a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug"><img src="https://vsmarketplacebadge.apphb.com/installs-short/OlegKunitsyn.gnucobol-debug.svg?label=Installs" /></a>
+  <img src="https://vsmarketplacebadge.apphb.com/version/OlegKunitsyn.gnucobol-debug.svg?label=Debugger%20for%20GnuCOBOL" />
+  <img src="https://vsmarketplacebadge.apphb.com/downloads-short/OlegKunitsyn.gnucobol-debug.svg?label=Downloads" />
+  <img src="https://vsmarketplacebadge.apphb.com/installs-short/OlegKunitsyn.gnucobol-debug.svg?label=Installs" />
 </p>
 
-A VS Code extension to debug or execute GnuCOBOL code. [Install from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug).
+An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug) or [Open VSX-Registry](https://open-vsx.org/extension/OlegKunitsyn/gnucobol-debug).
 
 ### Features
 * Setting breakpoints
@@ -28,7 +28,7 @@ A VS Code extension to debug or execute GnuCOBOL code. [Install from VS Code Mar
 ![Screenshot](screenshot.png)
 
 ### Requirements
-A COBOL-syntax extension i.e. `ibm.zopeneditor`, `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `bitlang.cobol` installed. Otherwise, the breakpoints will be unavailable. 
+A COBOL-syntax extension i.e. `bitlang.cobol`, `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `ibm.zopeneditor` installed. Otherwise, the breakpoints will be unavailable. 
 
 Now you may choose between *local* and *container* execution environment. Or try both of them :)
 
