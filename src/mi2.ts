@@ -30,7 +30,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private process: ChildProcess.ChildProcess;
 	private lastStepCommand: Function;
 
-	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
+	constructor(public lldbpath: string, public lldbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
 		if (procEnv) {
 			const env = {};
@@ -119,7 +119,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 					target = target.split('.').slice(0, -1).join('.');
 				}
 
-				this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, { cwd: cwd, env: this.procEnv });
+				this.process = ChildProcess.spawn(this.lldbpath, this.lldbArgs, { cwd: cwd, env: this.procEnv });
 				this.process.stdout.on("data", this.stdout.bind(this));
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
@@ -139,7 +139,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 		const cmds = [
 			this.sendCommand("gdb-set target-async on", false),
 			this.sendCommand("gdb-set args " + targetargs.join(' '), false),
-			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
 			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
 		];
 		return cmds;
@@ -151,10 +150,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 			if (executable && !nativePath.isAbsolute(executable))
 				executable = nativePath.join(cwd, executable);
 			if (executable)
-				args = args.concat([executable], this.gdbArgs);
+				args = args.concat([executable], this.lldbArgs);
 			else
-				args = this.gdbArgs;
-			this.process = ChildProcess.spawn(this.gdbpath, args, { cwd: cwd, env: this.procEnv });
+				args = this.lldbArgs;
+			this.process = ChildProcess.spawn(this.lldbpath, args, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
 			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
@@ -426,11 +425,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (this.verbose)
 			this.log("stderr", "goto");
 		return new Promise((resolve, reject) => {
-			const target: string = '"' + (filename ? escape(filename) + ":" : "") + line + '"';
-			this.sendCommand("break-insert -t " + target).then(() => {
-				this.sendCommand("exec-jump " + target).then((info) => {
-					resolve(info.resultRecords.resultClass == "running");
-				}, reject);
+			const target: string = (filename ? '"' + escape(filename) + '":' : "") + line;
+			this.sendCliCommand("jump " + target).then(() => {
+				this.emit("step-other", null);
+				resolve(true);
 			}, reject);
 		});
 	}
@@ -454,7 +452,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	setBreakPointCondition(bkptNum, condition): Thenable<any> {
 		if (this.verbose)
 			this.log("stderr", "setBreakPointCondition");
-		return this.sendCommand("break-condition " + bkptNum + " " + condition);
+		return this.sendCommand("break-condition " + bkptNum + " \"" + escape(condition) + "\" 1");
 	}
 
 	addBreakPoint(breakpoint: Breakpoint): Thenable<[boolean, Breakpoint]> {
@@ -532,14 +530,14 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (this.verbose)
 			this.log("stderr", "clearBreakPoints");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("break-delete").then((result) => {
-				if (result.resultRecords.resultClass == "done") {
-					this.breakpoints.clear();
-					resolve(true);
-				} else resolve(false);
-			}, () => {
-				resolve(false);
+			const promises = [];
+			this.breakpoints.forEach((breakpoint) => {
+				promises.push(this.sendCommand("break-delete " + breakpoint).then((result) => {
+					resolve(result.resultRecords.resultClass === "done");
+				}));
 			});
+			Promise.all(promises).then(resolve, reject);
+			this.breakpoints.clear();
 		});
 	}
 

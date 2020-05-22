@@ -30,8 +30,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         containerStart,
         containerStop,
-        vscode.debug.registerDebugConfigurationProvider('gdb', new GdbConfigurationProvider()),
-        vscode.debug.registerDebugAdapterDescriptorFactory('gdb', new GdbAdapterDescriptorFactory(new CoverageStatus(), new GDBDebugSession())),
+        vscode.debug.registerDebugConfigurationProvider('lldb', new GdbConfigurationProvider()),
+        vscode.debug.registerDebugAdapterDescriptorFactory('lldb', new GdbAdapterDescriptorFactory(new CoverageStatus(), new GDBDebugSession())),
     );
 }
 
@@ -41,13 +41,7 @@ export function deactivate() {
 
 class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
     resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
-        config.gdbargs = ["-q", "--interpreter=mi2"];
-        if (config.container !== undefined) {
-            config.cobcpath = 'docker';
-            config.gdbpath = 'docker';
-            config.cobcargs = ['exec', '-i', config.container, 'cobc'].concat(config.cobcargs);
-            config.gdbargs = ['exec', '-i', config.container, 'gdb'].concat(config.gdbargs);
-        }
+        config.lldbargs = [];
         return config;
     }
 }

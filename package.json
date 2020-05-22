@@ -62,7 +62,7 @@
 		],
 		"debuggers": [
 			{
-				"type": "gdb",
+				"type": "lldb",
 				"program": "./out/src/gdb.js",
 				"runtime": "node",
 				"label": "COBOL debugger",
@@ -70,7 +70,7 @@
 					"launch": {
 						"required": [
 							"target",
-							"gdbpath",
+							"lldbpath",
 							"cobcpath",
 							"targetargs",
 							"cwd",
@@ -92,10 +92,10 @@
 								"description": "Path to project",
 								"default": "${workspaceRoot}"
 							},
-							"gdbpath": {
+							"lldbpath": {
 								"type": "string",
-								"description": "Path to gdb",
-								"default": "gdb"
+								"description": "Path to lldbpath-mi",
+								"default": "lldb-mi"
 							},
 							"container": {
 								"type": "string",
@@ -132,7 +132,7 @@
 							},
 							"verbose": {
 								"type": "boolean",
-								"description": "Debug GDB",
+								"description": "Debug LLDB",
 								"default": false
 							}
 						}
@@ -141,12 +141,12 @@
 				"initialConfigurations": [
 					{
 						"name": "COBOL debugger",
-						"type": "gdb",
+						"type": "lldb",
 						"request": "launch",
 						"target": "${file}",
 						"targetargs": [],
 						"cwd": "${workspaceRoot}",
-						"gdbpath": "gdb",
+						"lldbpath": "lldb-mi",
 						"cobcpath": "cobc",
 						"cobcargs": [
 							"-free",
