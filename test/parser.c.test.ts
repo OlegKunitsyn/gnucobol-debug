@@ -10,7 +10,7 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [c]);
 
 		assert.equal(3, parsed.getLinesCount());
-		assert.equal(3, parsed.getVariablesCount());
+		assert.equal(2, parsed.getVariablesCount());
 		assert.equal('b_6', parsed.getVariableByCobol('hello.MYVAR').cName);
 		assert.equal('MYVAR', parsed.getVariableByC('hello.b_6').cobolName);
 		assert.equal(105, parsed.getLineC(cobol, 8).lineC);
@@ -30,15 +30,13 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [cSample, cSubSample, cSubSubSample]);
 
 		assert.equal(7, parsed.getLinesCount());
-		assert.equal(14, parsed.getVariablesCount());
+		assert.equal(13, parsed.getVariablesCount());
 
 		assert.equal('b_11', parsed.getVariableByCobol('sample.WS-GROUP').cName);
-		assert.equal('f_11', parsed.getVariableByCobol('sample.WS-GROUP.WS-GROUP').cName);
 		assert.equal('f_6', parsed.getVariableByCobol('subsample.WS-GROUP').cName);
 		assert.equal('f_11', parsed.getVariableByCobol('subsubsample.WS-GROUP-ALPHANUMERIC').cName);
 		
 		assert.equal('WS-GROUP', parsed.getVariableByC('sample.b_11').cobolName);
-		assert.equal('WS-GROUP', parsed.getVariableByC('sample.f_11').cobolName);
 		assert.equal('WS-GROUP', parsed.getVariableByC('subsample.f_6').cobolName);
 		assert.equal('WS-GROUP-ALPHANUMERIC', parsed.getVariableByC('subsubsample.f_11').cobolName);
 	});

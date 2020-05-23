@@ -666,6 +666,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 		command += variable.cName;
 
+		if(variable.cName.startsWith("f_")) {
+			command += ".data";
+		}
+
 		const response = await this.sendCommand(command);
 
 		let value = response.result("value");

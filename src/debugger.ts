@@ -29,17 +29,17 @@ export enum VariableType {
 	'0x01' = 'Group',
 	'0x02' = 'Boolean',
 	'0x10' = 'Numeric',
-	'0x11' = 'Numeric',
-	'0x12' = 'Numeric',
-	'0x13' = 'Numeric',
-	'0x14' = 'Numeric',
-	'0x15' = 'Numeric',
-	'0x16' = 'Numeric',
-	'0x17' = 'Numeric',
-	'0x18' = 'Numeric',
-	'0x19' = 'Numeric',
-	'0x1A' = 'Numeric',
-	'0x1B' = 'Numeric',
+	'0x11' = 'Numeric binary',
+	'0x12' = 'Numeric packed',
+	'0x13' = 'Numeric float',
+	'0x14' = 'Numeric double',
+	'0x15' = 'Numeric l double',
+	'0x16' = 'Numeric FP DEC64',
+	'0x17' = 'Numeric FP DEC128',
+	'0x18' = 'Numeric FP BIN32',
+	'0x19' = 'Numeric FP BIN64',
+	'0x1A' = 'Numeric FP BIN128',
+	'0x1B' = 'Numeric COMP5',
 	'0x24' = 'Numeric edited',
 	'0x20' = 'Alphanumeric',
 	'0x21' = 'Alphanumeric',
@@ -51,51 +51,37 @@ export enum VariableType {
 	'cob_u8_t' = 'Group'
 }
 
-const dataValueRegex = /.*size\s\=\s(\d+).*?data\s=\s(.*),\sattr.*/i;
-const repeatTimeRegex = /\"\,\s\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/;
+const repeatTimeRegex = /(\"\,\s|^)\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/i;
 export class CobolFieldDataParser {
 
 	public static parse(valueStr: string): string {
 		let value = valueStr;
-		const match = dataValueRegex.exec(value);
-		const size = parseInt(match[1]);
-		
-		value = match[2].trim();
-		if(value.indexOf(" ") === -1) {
-			return null;
+		if (value.indexOf(" ") === -1) {
+			return "null";
 		}
-		
+
 		value = value.substring(value.indexOf(" ") + 1);
 		if (value.startsWith("<")) {
-			if(value.indexOf(" ") === -1) {
-				return null;
+			if (value.indexOf(" ") === -1) {
+				return "null";
 			}
 			value = value.substring(value.indexOf(" ") + 1);
 		}
 
-		if (value.startsWith("\"")) {
-			const fieldMatch = repeatTimeRegex.exec(value);
-			if (fieldMatch) {
-				const fullSize = parseInt(fieldMatch[2]);
-				let suffix = "";
-				for (let i = 0; i < Math.min(fullSize, size); i++) {
-					suffix += fieldMatch[1];
-				}
-				value = value.replace(repeatTimeRegex, suffix);
+		const fieldMatch = repeatTimeRegex.exec(value);
+		if (fieldMatch) {
+			let replacement = "";
+			const size = parseInt(fieldMatch[3]);
+			for (let i = 0; i < size; i++) {
+				replacement += fieldMatch[2];
 			}
-			value = `"${value.substring(1, size + 1).trim()}"`;
-		} else if (value.startsWith("'")) {
-			const tempValue = value.substring(1, 2).trim();
-			if (tempValue === "0") {
-				let numericValue = "";
-				for (let i = 0; i < size; i++) {
-					numericValue += tempValue;
-				}
-				value = `"${numericValue}"`;
-			} else {
-				value = `'${tempValue}' repeats ${size} times`;
+			replacement += "\"";
+			value = value.replace(repeatTimeRegex, replacement);
+			if (!value.startsWith("\"")) {
+				value = `"${value}`;
 			}
 		}
+
 		return value;
 	}
 }
@@ -104,24 +90,24 @@ export class NumericValueParser {
 
 	private static ZERO_SIGN_CHAR_CODE = 112;
 
-	public static parse(valueStr: string, scale: number): string {
+	public static parse(valueStr: string, fieldSize: number, scale: number): string {
 		let value = valueStr;
 		if (value.startsWith('"')) {
-			value = value.substring(1, value.length - 1);
+			value = value.substring(1, fieldSize + 1);
 			const signCharCode = value.charCodeAt(value.length - 1);
 			let sign = "";
 			if (signCharCode >= this.ZERO_SIGN_CHAR_CODE) {
 				sign = "-";
 				value = `${value.substring(0, value.length - 1)}${signCharCode - this.ZERO_SIGN_CHAR_CODE}`
 			}
-			if(value.length < scale) {
+			if (value.length < scale) {
 				const diff = scale - value.length;
 				let prefix = "";
 				for (let i = 0; i < diff; i++) {
 					prefix += "0";
 				}
 				value = prefix + value;
-			} else if(scale < 0) {
+			} else if (scale < 0) {
 				const diff = scale * -1;
 				let suffix = "";
 				for (let i = 0; i < diff; i++) {
@@ -141,23 +127,47 @@ export class NumericValueParser {
 	}
 }
 
+export class AlphanumericValueParser {
+
+	public static parse(valueStr: string, fieldSize: number): string {
+		let value = valueStr;
+		let shift = 0;
+		if (value.startsWith('"')) {
+			shift = 1;
+		}
+		const size = Math.min(fieldSize + shift, valueStr.length - shift);
+		return `"${value.substring(shift, size).trim()}"`;
+	}
+}
+
 export class Attribute {
 	public constructor(
 		public type: string,
 		public digits: number,
 		public scale: number) { }
 
-	public parse(valueStr: string): string {
+	public parse(fieldSize: number, valueStr: string): string {
 		if (!valueStr) {
 			return valueStr;
 		}
-		if (valueStr.startsWith("{")) {
+		if (valueStr.startsWith("0x")) {
 			valueStr = CobolFieldDataParser.parse(valueStr);
 		}
-		if (this.type === 'Numeric') {
-			return NumericValueParser.parse(valueStr, this.scale);
+		if(valueStr === "null") {
+			return valueStr;
 		}
-		return valueStr;
+		switch (this.type) {
+			case 'Numeric':
+				return NumericValueParser.parse(valueStr, fieldSize, this.scale);
+			case 'Numeric edited':
+			case 'Alphanumeric':
+			case 'Alphanumeric edited':
+			case 'National':
+			case 'National edited':
+				return AlphanumericValueParser.parse(valueStr, fieldSize);
+			default:
+				return valueStr;
+		}
 	}
 }
 
@@ -212,7 +222,7 @@ export class DebuggerVariable {
 	}
 
 	public setValue(value: string): void {
-		this.value = this.attribute.parse(value);
+		this.value = this.attribute.parse(this.size, value);
 	}
 }
 
