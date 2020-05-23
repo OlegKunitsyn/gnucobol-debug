@@ -11,8 +11,8 @@ suite("C code parse", () => {
 
 		assert.equal(3, parsed.getLinesCount());
 		assert.equal(2, parsed.getVariablesCount());
-		assert.equal('b_6', parsed.getVariableByCobol('hello.MYVAR').cName);
-		assert.equal('MYVAR', parsed.getVariableByC('hello.b_6').cobolName);
+		assert.equal('f_6', parsed.getVariableByCobol('hello_.MYVAR').cName);
+		assert.equal('MYVAR', parsed.getVariableByC('hello_.f_6').cobolName);
 		assert.equal(105, parsed.getLineC(cobol, 8).lineC);
 		assert.equal(c, parsed.getLineC(cobol, 8).fileC);
 		assert.equal(105, parsed.getLineC('hello.cbl', 8).lineC);
@@ -32,37 +32,63 @@ suite("C code parse", () => {
 		assert.equal(7, parsed.getLinesCount());
 		assert.equal(13, parsed.getVariablesCount());
 
-		assert.equal('b_11', parsed.getVariableByCobol('sample.WS-GROUP').cName);
-		assert.equal('f_6', parsed.getVariableByCobol('subsample.WS-GROUP').cName);
-		assert.equal('f_11', parsed.getVariableByCobol('subsubsample.WS-GROUP-ALPHANUMERIC').cName);
-		
-		assert.equal('WS-GROUP', parsed.getVariableByC('sample.b_11').cobolName);
-		assert.equal('WS-GROUP', parsed.getVariableByC('subsample.f_6').cobolName);
-		assert.equal('WS-GROUP-ALPHANUMERIC', parsed.getVariableByC('subsubsample.f_11').cobolName);
+		assert.equal('f_11', parsed.getVariableByCobol('sample_.WS-GROUP').cName);
+		assert.equal('f_6', parsed.getVariableByCobol('subsample_.WS-GROUP').cName);
+		assert.equal('f_11', parsed.getVariableByCobol('subsubsample_.WS-GROUP-ALPHANUMERIC').cName);
+
+		assert.equal('WS-GROUP', parsed.getVariableByC('sample_.f_11').cobolName);
+		assert.equal('WS-GROUP', parsed.getVariableByC('subsample_.f_6').cobolName);
+		assert.equal('WS-GROUP-ALPHANUMERIC', parsed.getVariableByC('subsubsample_.f_11').cobolName);
 	});
 	test("Variables Hierarchy", () => {
 		const c = nativePath.resolve(cwd, 'petstore.c');
 		const parsed = new SourceMap(cwd, [c]);
 
-		assert.equal('b_14', parsed.getVariableByCobol('petstore.WS-BILL').cName);
-		assert.equal('f_15', parsed.getVariableByCobol('petstore.WS-BILL.TOTAL-QUANTITY').cName);
-		assert.equal('WS-BILL', parsed.getVariableByC('petstore.b_14').cobolName);
-		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('petstore.f_15').cobolName);
+		assert.equal('b_14', parsed.getVariableByCobol('petstore_.WS-BILL').cName);
+		assert.equal('f_15', parsed.getVariableByCobol('petstore_.WS-BILL.TOTAL-QUANTITY').cName);
+		assert.equal('WS-BILL', parsed.getVariableByC('petstore_.b_14').cobolName);
+		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('petstore_.f_15').cobolName);
 	});
 	test("Attributes", () => {
 		const c = nativePath.resolve(cwd, 'datatypes.c');
 		const parsed = new SourceMap(cwd, [c]);
 
-		for(let variable of parsed.getVariablesByC()) {
+		for (let variable of parsed.getVariablesByCobol()) {
 			assert.notEqual(variable.attribute, null);
+			assert.notEqual(variable.attribute, undefined);
 			assert.notEqual(variable.attribute.type, null);
+			assert.notEqual(variable.attribute.type, undefined);
 			assert.notEqual(variable.attribute.digits, null);
+			assert.notEqual(variable.attribute.digits, undefined);
 			assert.notEqual(variable.attribute.scale, null);
+			assert.notEqual(variable.attribute.scale, undefined);
 		}
 
-		const variable = parsed.getVariableByCobol('datatypes.numeric-data.disppp');
+		const variable = parsed.getVariableByCobol('datatypes_.numeric-data.dispp');
 		assert.equal('Numeric', variable.attribute.type);
 		assert.equal(8, variable.attribute.digits);
 		assert.equal(-4, variable.attribute.scale);
+	});
+	test("Multiple Functions", () => {
+		const c = nativePath.resolve(cwd, 'func.c');
+		const parsed = new SourceMap(cwd, [c]);
+
+		const f_6 = parsed.getVariableByC('func_.f_6');
+		assert.equal('argA', f_6.cobolName);
+
+		const f_14 = parsed.getVariableByC('dvd_.f_14');
+		assert.equal('dividend', f_14.cobolName);
+
+		const f_23 = parsed.getVariableByC('mlp_.f_23');
+		assert.equal('argA', f_23.cobolName);
+
+		const argAFunc = parsed.getVariableByCobol('func_.argA');
+		assert.equal('f_6', argAFunc.cName);
+
+		const dividendDvd = parsed.getVariableByCobol('dvd_.dividend');
+		assert.equal('f_14', dividendDvd.cName);
+
+		const argAMlp = parsed.getVariableByCobol('mlp_.argA');
+		assert.equal('f_23', argAMlp.cName);
 	});
 });

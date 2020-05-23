@@ -176,32 +176,16 @@ export class DebuggerVariable {
 	public constructor(
 		public cobolName: string,
 		public cName: string,
-		public sourceFile: string,
+		public functionName: string,
 		public attribute: Attribute = null,
 		public size: number = null,
-		public value: string = null,
+		public value: string = "null",
 		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
 
 	public addChild(child: DebuggerVariable): void {
 		child.parent = this;
 		this.children.set(child.cobolName, child);
-	}
-
-	public getChild(path: string): DebuggerVariable {
-		let childName = path;
-		let pathHasEnded = true;
-		if (path.indexOf(".") !== -1) {
-			childName = path.substring(0, path.indexOf("."));
-			pathHasEnded = false;
-		}
-		const child = this.children.get(childName);
-		if (pathHasEnded) {
-			return child;
-		} else if (child !== undefined) {
-			return child.getChild(path.substring(path.indexOf(".") + 1));
-		}
-		return undefined;
 	}
 
 	public getDataStorage(): DebuggerVariable {
@@ -213,12 +197,6 @@ export class DebuggerVariable {
 
 	public hasChildren(): boolean {
 		return this.children.size > 0;
-	}
-
-	public setType(type: string): void {
-		if (!this.attribute) {
-			this.attribute = new Attribute(type, 0, 0);
-		}
 	}
 
 	public setValue(value: string): void {
