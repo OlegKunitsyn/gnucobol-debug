@@ -42,7 +42,7 @@ export class SourceMap {
 	private parse(fileC: string): void {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.resolve(this.cwd, fileC);
-		
+
 		const basename = nativePath.basename(fileC);
 		const cleanedFile = basename.substring(0, basename.lastIndexOf(".c"));
 
@@ -81,15 +81,18 @@ export class SourceMap {
 			match = fieldRegex.exec(line);
 			if (match) {
 				const attribute = this.attributes.get(`${cleanedFile}.${match[4]}`);
-				const field = new DebuggerVariable(match[5], match[1], cleanedFile, attribute, parseInt(match[2]));
-				this.variablesByC.set(`${cleanedFile}.${field.cName}`, field);
-
 				const dataStorage = this.variablesByC.get(`${cleanedFile}.${match[3]}`);
-				if (dataStorage) {
-					dataStorage.addChild(field);
-					this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}.${field.cobolName}`, field);
-				} else {
-					this.variablesByCobol.set(`${cleanedFile}.${field.cobolName}`, field);
+
+				if (!dataStorage || dataStorage.cobolName !== match[5]) {
+					const field = new DebuggerVariable(match[5], match[1], cleanedFile, attribute, parseInt(match[2]));
+					this.variablesByC.set(`${cleanedFile}.${field.cName}`, field);
+					
+					if (dataStorage) {
+						dataStorage.addChild(field);
+						this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}.${field.cobolName}`, field);
+					} else {
+						this.variablesByCobol.set(`${cleanedFile}.${field.cobolName}`, field);
+					}
 				}
 			}
 			match = fileIncludeRegex.exec(line);

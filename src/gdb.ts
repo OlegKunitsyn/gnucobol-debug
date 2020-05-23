@@ -75,7 +75,7 @@ export class GDBDebugSession extends DebugSession {
 		this.sendResponse(response);
 	}
 
-	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {	
+	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 		if (!args.coverage) {
 			this.coverageStatus = undefined;
 		}
@@ -414,21 +414,18 @@ export class GDBDebugSession extends DebugSession {
 				const stackVariable = await this.miDebugger.evalExpression(id, 0, 0);
 
 				const variables: DebugProtocol.Variable[] = [];
-				if (stackVariable.hasChildren()) {
-					for (const child of stackVariable.children.values()) {
-						variables.push({
-							name: child.cobolName,
-							type: child.attribute.type,
-							value: child.attribute.type,
-							variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
-						});
-					}
-				} else {
+				variables.push({
+					name: 'Value',
+					type: stackVariable.attribute.type,
+					value: stackVariable.value,
+					variablesReference: 0
+				});
+				for (const child of stackVariable.children.values()) {
 					variables.push({
-						name: 'Value',
-						type: stackVariable.attribute.type,
-						value: stackVariable.value,
-						variablesReference: 0
+						name: child.cobolName,
+						type: child.attribute.type,
+						value: child.attribute.type,
+						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
 					});
 				}
 				response.body = {
