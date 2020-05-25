@@ -13,25 +13,11 @@ import {
 	ThreadEvent
 } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import * as systemPath from "path";
-import * as net from "net";
-import * as os from "os";
-import * as fs from "fs";
-import { DebuggerVariable, VariableObject } from './debugger';
+import { VariableObject } from './debugger';
 import { MINode } from './parser.mi2';
 import { MI2 } from './mi2';
 import { CoverageStatus } from './coverage';
 
-const resultRegex = /^([a-zA-Z_\-][a-zA-Z0-9_\-]*|\[\d+\])\s*=\s*/;
-const variableRegex = /^[a-zA-Z_\-][a-zA-Z0-9_\-]*/;
-const errorRegex = /^\<.+?\>/;
-const referenceStringRegex = /^(0x[0-9a-fA-F]+\s*)"/;
-const referenceRegex = /^0x[0-9a-fA-F]+/;
-const cppReferenceRegex = /^@0x[0-9a-fA-F]+/;
-const nullpointerRegex = /^0x0+\b/;
-const charRegex = /^(\d+) ['"]/;
-const numberRegex = /^\d+(\.\d+)?/;
-const pointerCombineChar = ".";
 const STACK_HANDLES_START = 1000;
 const VAR_HANDLES_START = 512 * 256 + 1000;
 
@@ -47,7 +33,6 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	gdbpath: string;
 	gdbargs: string[];
 	cobcpath: string;
-	cobcver: number;
 	cobcargs: string[];
 	env: any;
 	group: string[];
@@ -66,8 +51,6 @@ export class GDBDebugSession extends DebugSession {
 	protected crashed: boolean;
 	protected debugReady: boolean;
 	protected miDebugger: MI2;
-	protected commandServer: net.Server;
-	protected serverPath: string;
 	coverageStatus: CoverageStatus;
 	private container: string;
 
@@ -80,7 +63,7 @@ export class GDBDebugSession extends DebugSession {
 			this.coverageStatus = undefined;
 		}
 		this.container = args.container;
-		this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcver, args.cobcargs, args.env, args.verbose, args.noDebug);
+		this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug);
 		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
 		this.miDebugger.on("exited-normally", this.quitEvent.bind(this));
@@ -94,32 +77,6 @@ export class GDBDebugSession extends DebugSession {
 		this.miDebugger.on("thread-created", this.threadCreatedEvent.bind(this));
 		this.miDebugger.on("thread-exited", this.threadExitedEvent.bind(this));
 		this.sendEvent(new InitializedEvent());
-		try {
-			this.commandServer = net.createServer(c => {
-				c.on("data", data => {
-					const rawCmd = data.toString();
-					const spaceIndex = rawCmd.indexOf(" ");
-					let func = rawCmd;
-					let args = [];
-					if (spaceIndex != -1) {
-						func = rawCmd.substr(0, spaceIndex);
-						args = JSON.parse(rawCmd.substr(spaceIndex + 1));
-					}
-					Promise.resolve(this.miDebugger[func].apply(this.miDebugger, args)).then(data => {
-						c.write(data.toString());
-					});
-				});
-			});
-			this.commandServer.on("error", err => {
-				this.handleMsg("stderr", "WARNING: Utility Command Server: Error in command socket " + err.toString() + "\nWARNING: The examine memory location command won't work");
-			});
-			if (!fs.existsSync(systemPath.join(os.tmpdir(), "gnucobol-debug-sockets")))
-				fs.mkdirSync(systemPath.join(os.tmpdir(), "gnucobol-debug-sockets"));
-			this.commandServer.listen(this.serverPath = systemPath.join(os.tmpdir(), "gnucobol-debug-sockets", ("Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)).toLowerCase()));
-		} catch (e) {
-			this.handleMsg("stderr", "WARNING: Utility Command Server: Failed to start " + e.toString() + "\nWARNING: The examine memory location command won't work");
-		}
-
 		this.quit = false;
 		this.needContinue = false;
 		this.started = false;
@@ -197,11 +154,6 @@ export class GDBDebugSession extends DebugSession {
 
 		this.quit = true;
 		this.sendEvent(new TerminatedEvent());
-
-		if (this.serverPath)
-			fs.unlink(this.serverPath, (err) => {
-				console.error("Failed to unlink debug server");
-			});
 	}
 
 	protected launchError(err: any) {
@@ -212,8 +164,6 @@ export class GDBDebugSession extends DebugSession {
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
 		this.miDebugger.stop();
-		this.commandServer.close();
-		this.commandServer = undefined;
 		this.sendResponse(response);
 	}
 

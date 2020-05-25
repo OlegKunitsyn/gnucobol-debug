@@ -10,7 +10,7 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [c]);
 
 		assert.equal(3, parsed.getLinesCount());
-		assert.equal(2, parsed.getVariablesCount());
+		assert.equal(3, parsed.getVariablesCount());
 		assert.equal('f_6', parsed.getVariableByCobol('hello_.MYVAR').cName);
 		assert.equal('MYVAR', parsed.getVariableByC('hello_.f_6').cobolName);
 		assert.equal(105, parsed.getLineC(cobol, 8).lineC);
@@ -30,7 +30,7 @@ suite("C code parse", () => {
 		const parsed = new SourceMap(cwd, [cSample, cSubSample, cSubSubSample]);
 
 		assert.equal(7, parsed.getLinesCount());
-		assert.equal(13, parsed.getVariablesCount());
+		assert.equal(14, parsed.getVariablesCount());
 
 		assert.equal('f_11', parsed.getVariableByCobol('sample_.WS-GROUP').cName);
 		assert.equal('f_6', parsed.getVariableByCobol('subsample_.WS-GROUP').cName);
@@ -67,7 +67,7 @@ suite("C code parse", () => {
 		const variable = parsed.getVariableByCobol('datatypes_.numeric-data.dispp');
 		assert.equal('Numeric', variable.attribute.type);
 		assert.equal(8, variable.attribute.digits);
-		assert.equal(-4, variable.attribute.scale);
+		assert.equal(8, variable.attribute.scale);
 	});
 	test("Multiple Functions", () => {
 		const c = nativePath.resolve(cwd, 'func.c');

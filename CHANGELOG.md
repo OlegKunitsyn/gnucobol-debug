@@ -1,3 +1,10 @@
+## 0.31.18
+* Fix C parsing on Windows [Issue #32](https://github.com/OlegKunitsyn/gnucobol-debug/issues/32)
+
+## 0.31.17
+* Fix numerical fields in Variables pane. [Issue #30](https://github.com/OlegKunitsyn/gnucobol-debug/issues/30) by Bruno Pacheco
+* Implement start/stop commands for GnuCOBOL Docker
+
 ## 0.31.16
 * Show field's data instead of data. [Issue #4](https://github.com/OlegKunitsyn/gnucobol-debug/issues/4) by Bruno Pacheco
 * Compatibility with GnuCOBOL 3.1
