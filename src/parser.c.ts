@@ -3,11 +3,12 @@ import * as nativePath from "path";
 import { DebuggerVariable, Attribute, VariableType } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*(\d*),\s*(\d*),.*/i;
+const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*([0-9-]*),\s*([0-9-]*),.*/i;
 const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s\\:]+)\s+\*\//i;
+const functionRegex = /\/\*\sProgram\slocal\svariables\sfor\s'(.*)'\s\*\//i;
 
 export class Line {
 	fileCobol: string;
@@ -42,7 +43,7 @@ export class SourceMap {
 	private parse(fileC: string): void {
 		if (!nativePath.isAbsolute(fileC))
 			fileC = nativePath.resolve(this.cwd, fileC);
-		
+
 		const basename = nativePath.basename(fileC);
 		const cleanedFile = basename.substring(0, basename.lastIndexOf(".c"));
 
@@ -50,6 +51,7 @@ export class SourceMap {
 		let reader = new readline(fileC);
 		let row: false | Buffer;
 		let fileCobol: string;
+		let functionName: string;
 		while (row = reader.next()) {
 			let line = row.toString();
 			let match = fileCobolRegex.exec(line);
@@ -59,6 +61,10 @@ export class SourceMap {
 				} else {
 					fileCobol = match[1];
 				}
+			}
+			match = functionRegex.exec(line);
+			if (match) {
+				functionName = match[1].toLowerCase() + "_";
 			}
 			match = procedureRegex.exec(line);
 			if (match) {
@@ -74,22 +80,31 @@ export class SourceMap {
 			}
 			match = dataStorageRegex.exec(line);
 			if (match) {
-				const dataStorage = new DebuggerVariable(match[3], match[2], cleanedFile, new Attribute(VariableType[match[1]], 0, 0));
-				this.variablesByC.set(`${cleanedFile}.${dataStorage.cName}`, dataStorage);
-				this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}`, dataStorage);
+				const dataStorage = new DebuggerVariable(match[3], match[2], functionName, new Attribute(VariableType[match[1]], 0, 0));
+				this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
+				this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}`, dataStorage);
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
 				const attribute = this.attributes.get(`${cleanedFile}.${match[4]}`);
-				const field = new DebuggerVariable(match[5], match[1], cleanedFile, attribute, parseInt(match[2]));
-				this.variablesByC.set(`${cleanedFile}.${field.cName}`, field);
+				const dataStorage = this.variablesByC.get(`${functionName}.${match[3]}`);
+				const field = new DebuggerVariable(match[5], match[1], functionName, attribute, parseInt(match[2]));
 
-				const dataStorage = this.variablesByC.get(`${cleanedFile}.${match[3]}`);
-				if (dataStorage) {
-					dataStorage.addChild(field);
-					this.variablesByCobol.set(`${cleanedFile}.${dataStorage.cobolName}.${field.cobolName}`, field);
+				if (dataStorage && dataStorage.cobolName === field.cobolName) {
+					dataStorage.cName = field.cName;
+					dataStorage.attribute = field.attribute;
+					dataStorage.size = field.size;
+
+					this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				} else {
-					this.variablesByCobol.set(`${cleanedFile}.${field.cobolName}`, field);
+					this.variablesByC.set(`${functionName}.${field.cName}`, field);
+
+					if (dataStorage) {
+						dataStorage.addChild(field);
+						this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}.${field.cobolName}`, field);
+					} else {
+						this.variablesByCobol.set(`${functionName}.${field.cobolName}`, field);
+					}
 				}
 			}
 			match = fileIncludeRegex.exec(line);
@@ -102,6 +117,10 @@ export class SourceMap {
 
 	public getVariablesByC(): IterableIterator<DebuggerVariable> {
 		return this.variablesByC.values();
+	}
+
+	public getVariablesByCobol(): IterableIterator<DebuggerVariable> {
+		return this.variablesByCobol.values();
 	}
 
 	public getLinesCount(): number {
@@ -152,6 +171,10 @@ export class SourceMap {
 
 		this.lines.forEach(e => {
 			out += e.toString() + "\n";
+		});
+
+		this.variablesByC.forEach((value, key) => {
+			out += `${key} > ${value.cobolName}\n`;
 		});
 
 		this.variablesByCobol.forEach((value, key) => {

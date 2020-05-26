@@ -606,19 +606,18 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async getCurrentSourceFile(): Promise<string> {
+	async getCurrentFunctionName(): Promise<string> {
 		if (this.verbose)
-			this.log("stderr", "getCurrentSourceFile");
-		const response = await this.sendCommand(`stack-info-frame`);
-		const fileName = response.result("frame.file");
-		return fileName.substring(0, fileName.lastIndexOf(".c"));
+			this.log("stderr", "getCurrentFunctionName");
+		const response = await this.sendCommand("stack-info-frame");
+		return response.result("frame.func").toLowerCase();
 	}
 
 	async getStackVariables(thread: number, frame: number): Promise<DebuggerVariable[]> {
 		if (this.verbose)
 			this.log("stderr", "getStackVariables");
 
-		const file = await this.getCurrentSourceFile();
+		const functionName = await this.getCurrentFunctionName();
 
 		const variablesResponse = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
 		const variables = variablesResponse.result("variables");
@@ -628,7 +627,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
 
-			const cobolVariable = this.map.getVariableByC(`${file}.${key}`);
+			const cobolVariable = this.map.getVariableByC(`${functionName}.${key}`);
 
 			if (cobolVariable) {
 				cobolVariable.setValue(value);
@@ -657,17 +656,24 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		const file = await this.getCurrentSourceFile();
+		const functionName = await this.getCurrentFunctionName();
 
-		const variable = this.map.getVariableByCobol(`${file}.${name}`);
+		const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
 
 		command += variable.cName;
 
-		const response = await this.sendCommand(command);
+		if (variable.cName.startsWith("f_")) {
+			command += ".data";
+		}
 
-		let value = response.result("value");
-		variable.setValue(value);
+		try {
+			const response = await this.sendCommand(command);
 
+			let value = response.result("value");
+			variable.setValue(value);
+		} catch (e) {
+			this.log("stderr", e.message);
+		}
 		return variable;
 	}
 
