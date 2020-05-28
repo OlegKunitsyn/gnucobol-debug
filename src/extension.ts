@@ -1,29 +1,42 @@
 import * as vscode from "vscode";
-import * as ChildProcess from "child_process";
 import { GDBDebugSession } from "./gdb";
 import { CoverageStatus } from './coverage';
 
-const docker = vscode.window.createTerminal("GnuCOBOL Docker");
+const dockerTerminal = vscode.window.createTerminal("GnuCOBOL Docker");
+const dockerImage = 'olegkunitsyn/gnucobol:3.1-dev';
+const dockerMessage = 'GnuCOBOL Docker container is not defined in launch.json';
 
 export function activate(context: vscode.ExtensionContext) {
     const containerStart = vscode.commands.registerCommand('gnucobol-debug.containerStart', function () {
-        const workspaceRoot:string = vscode.workspace.workspaceFolders[0].uri.fsPath;
-        let config: vscode.DebugConfiguration; 
+        const workspaceRoot: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        let config: vscode.DebugConfiguration;
         for (config of vscode.workspace.getConfiguration('launch', vscode.workspace.workspaceFolders[0].uri).get('configurations') as []) {
-            if (config.type === 'gdb' && config.container !== undefined) {
-                docker.show(true);
-                docker.sendText(`docker run -d -i --name ${config.container} -w ${workspaceRoot} -v ${workspaceRoot}:${workspaceRoot} olegkunitsyn/gnucobol:3.1-dev`);
+            if (config.type !== 'gdb') {
+                continue;
             }
+            if (config.container === undefined) {
+                vscode.window.showInformationMessage(dockerMessage);
+                break;
+            }
+            dockerTerminal.show(true);
+            dockerTerminal.sendText(`docker run -d -i --name ${config.container} -w ${workspaceRoot} -v ${workspaceRoot}:${workspaceRoot} ${dockerImage}`);
+            break;
         };
     });
 
     const containerStop = vscode.commands.registerCommand('gnucobol-debug.containerStop', function () {
-        let config: vscode.DebugConfiguration; 
+        let config: vscode.DebugConfiguration;
         for (config of vscode.workspace.getConfiguration('launch', vscode.workspace.workspaceFolders[0].uri).get('configurations') as []) {
-            if (config.type === 'gdb' && config.container !== undefined) {
-                docker.show(true);
-                docker.sendText(`docker rm --force ${config.container}`);
+            if (config.type !== 'gdb') {
+                continue;
             }
+            if (config.container === undefined) {
+                vscode.window.showInformationMessage(dockerMessage);
+                break;
+            }
+            dockerTerminal.show(true);
+            dockerTerminal.sendText(`docker rm --force ${config.container}`);
+            break;
         };
     });
 
@@ -36,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-    docker.dispose();
+    dockerTerminal.dispose();
 }
 
 class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
