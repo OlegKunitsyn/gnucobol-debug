@@ -32,6 +32,7 @@ export class SourceMap {
 	private variablesByCobol = new Map<string, DebuggerVariable>();
 	private variablesByC = new Map<string, DebuggerVariable>();
 	private attributes = new Map<string, Attribute>();
+	private dataStorages = new Map<string, DebuggerVariable>();
 
 	constructor(cwd: string, filesCobol: string[]) {
 		this.cwd = cwd;
@@ -81,16 +82,19 @@ export class SourceMap {
 			match = dataStorageRegex.exec(line);
 			if (match) {
 				const dataStorage = new DebuggerVariable(match[3], match[2], functionName, new Attribute(VariableType[match[1]], 0, 0));
+				this.dataStorages.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}`, dataStorage);
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
 				const attribute = this.attributes.get(`${cleanedFile}.${match[4]}`);
-				const dataStorage = this.variablesByC.get(`${functionName}.${match[3]}`);
+				const dataStorage = this.dataStorages.get(`${functionName}.${match[3]}`);
 				const field = new DebuggerVariable(match[5], match[1], functionName, attribute, parseInt(match[2]));
 
 				if (dataStorage && dataStorage.cobolName === field.cobolName) {
+					this.variablesByC.delete(`${functionName}.${dataStorage.cName}`);
+
 					dataStorage.cName = field.cName;
 					dataStorage.attribute = field.attribute;
 					dataStorage.size = field.size;

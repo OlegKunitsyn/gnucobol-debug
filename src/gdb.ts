@@ -367,7 +367,7 @@ export class GDBDebugSession extends DebugSession {
 				variables.push({
 					name: 'Value',
 					type: stackVariable.attribute.type,
-					value: stackVariable.value,
+					value: stackVariable.value || "null",
 					variablesReference: 0
 				});
 				for (const child of stackVariable.children.values()) {
@@ -439,7 +439,7 @@ export class GDBDebugSession extends DebugSession {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
-					result: res.value
+					result: res.value || "null"
 				};
 				this.sendResponse(response);
 			}, msg => {
