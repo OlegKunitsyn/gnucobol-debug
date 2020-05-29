@@ -51,122 +51,34 @@ export enum VariableType {
 	'cob_u8_t' = 'Group'
 }
 
-const repeatTimeRegex = /(\"\,\s|^)\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/i;
-export class CobolFieldDataParser {
-
-	public static parse(valueStr: string): string {
-		let value = valueStr;
-		if (value.indexOf(" ") === -1) {
-			return "null";
-		}
-
-		value = value.substring(value.indexOf(" ") + 1);
-		if (value.startsWith("<")) {
-			if (value.indexOf(" ") === -1) {
-				return "null";
-			}
-			value = value.substring(value.indexOf(" ") + 1);
-		}
-
-		const fieldMatch = repeatTimeRegex.exec(value);
-		if (fieldMatch) {
-			let replacement = "";
-			const size = parseInt(fieldMatch[3]);
-			for (let i = 0; i < size; i++) {
-				replacement += fieldMatch[2];
-			}
-			replacement += "\"";
-			value = value.replace(repeatTimeRegex, replacement);
-			if (!value.startsWith("\"")) {
-				value = `"${value}`;
-			}
-		}
-
-		return value;
-	}
-}
-
-export class NumericValueParser {
-
-	private static ZERO_SIGN_CHAR_CODE = 112;
-
-	public static parse(valueStr: string, fieldSize: number, scale: number): string {
-		let value = valueStr;
-		if (value.startsWith('"')) {
-			value = value.substring(1, fieldSize + 1);
-			const signCharCode = value.charCodeAt(value.length - 1);
-			let sign = "";
-			if (signCharCode >= this.ZERO_SIGN_CHAR_CODE) {
-				sign = "-";
-				value = `${value.substring(0, value.length - 1)}${signCharCode - this.ZERO_SIGN_CHAR_CODE}`
-			}
-			if (value.length < scale) {
-				const diff = scale - value.length;
-				let prefix = "";
-				for (let i = 0; i < diff; i++) {
-					prefix += "0";
-				}
-				value = prefix + value;
-			} else if (scale < 0) {
-				const diff = scale * -1;
-				let suffix = "";
-				for (let i = 0; i < diff; i++) {
-					suffix += "0";
-				}
-				value += suffix;
-			}
-			const wholeNumber = value.substring(0, value.length - scale);
-			const decimals = value.substring(value.length - scale);
-			let numericValue = `${sign}${wholeNumber}`;
-			if (decimals.length > 0) {
-				numericValue = `${numericValue}.${decimals}`;
-			}
-			return `${parseFloat(numericValue)}`;
-		}
-		return value;
-	}
-}
-
-export class AlphanumericValueParser {
-
-	public static parse(valueStr: string, fieldSize: number): string {
-		let value = valueStr;
-		let shift = 0;
-		if (value.startsWith('"')) {
-			shift = 1;
-		}
-		const size = Math.min(fieldSize + shift, valueStr.length - shift);
-		return `"${value.substring(shift, size).trim()}"`;
-	}
-}
-
 export class Attribute {
 	public constructor(
 		public type: string,
 		public digits: number,
 		public scale: number) { }
 
-	public parse(fieldSize: number, valueStr: string): string {
+	public parse(valueStr: string): string {
 		if (!valueStr) {
-			return valueStr;
-		}
-		if (valueStr.startsWith("0x")) {
-			valueStr = CobolFieldDataParser.parse(valueStr);
-		}
-		if(valueStr === "null") {
-			return valueStr;
+			return null;
 		}
 		switch (this.type) {
+			case 'Group':
+			case 'Boolean':
 			case 'Numeric':
-				return NumericValueParser.parse(valueStr, fieldSize, this.scale);
-			case 'Numeric edited':
-			case 'Alphanumeric':
-			case 'Alphanumeric edited':
-			case 'National':
-			case 'National edited':
-				return AlphanumericValueParser.parse(valueStr, fieldSize);
-			default:
+			case 'Numeric binary':
+			case 'Numeric packed':
+			case 'Numeric float':
+			case 'Numeric double':
+			case 'Numeric long double':
+			case 'Numeric FP DEC64':
+			case 'Numeric FP DEC128':
+			case 'Numeric FP BIN32':
+			case 'Numeric FP BIN64':
+			case 'Numeric FP BIN128':
+			case 'Numeric COMP5':
 				return valueStr;
+			default:
+				return `"${valueStr.trim()}"`;
 		}
 	}
 }
@@ -179,7 +91,7 @@ export class DebuggerVariable {
 		public functionName: string,
 		public attribute: Attribute = null,
 		public size: number = null,
-		public value: string = "null",
+		public value: string = null,
 		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
 
@@ -200,7 +112,7 @@ export class DebuggerVariable {
 	}
 
 	public setValue(value: string): void {
-		this.value = this.attribute.parse(this.size, value);
+		this.value = this.attribute.parse(value);
 	}
 }
 

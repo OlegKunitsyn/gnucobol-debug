@@ -207,11 +207,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 	}
 
-	stdin(data: string) {
+	stdin(data: string, cb?: any) {
 		if (this.isReady()) {
 			if (this.verbose)
 				this.log("stderr", "stdin: " + data);
-			this.process.stdin.write(data + "\n");
+			this.process.stdin.write(data + "\n", cb);
 		}
 	}
 
@@ -230,8 +230,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 		return false;
 	}
 
-	onOutput(lines) {
-		lines = <string[]>lines.split('\n');
+	onOutput(linesStr: string) {
+		const lines = <string[]>linesStr.split('\n');
 		lines.forEach(line => {
 			if (couldBeOutput(line)) {
 				if (!gdbRegex.exec(line))
@@ -651,15 +651,14 @@ export class MI2 extends EventEmitter implements IDebugger {
 	async evalExpression(name: string, thread: number, frame: number): Promise<DebuggerVariable> {
 		if (this.verbose)
 			this.log("stderr", "evalExpression");
-		let command = "data-evaluate-expression ";
-		if (thread != 0) {
-			command += `--thread ${thread} --frame ${frame} `;
-		}
 
 		const functionName = await this.getCurrentFunctionName();
 
 		const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
-
+		let command = "data-evaluate-expression ";
+		if (thread != 0) {
+			command += `--thread ${thread} --frame ${frame} `;
+		}
 		command += variable.cName;
 
 		if (variable.cName.startsWith("f_")) {
@@ -667,9 +666,14 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 
 		try {
-			const response = await this.sendCommand(command);
-
-			let value = response.result("value");
+			const dataResponse = await this.sendCommand(command);
+			let value = dataResponse.result("value");
+			if (value === "0x0") {
+				value = null;
+			} else if (variable.cName.startsWith("f_")) {
+				const response = await this.evalCobField(variable.cName);
+				value = response.result("value");
+			}
 			variable.setValue(value);
 		} catch (e) {
 			this.log("stderr", e.message);
@@ -720,12 +724,21 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	sendUserInput(command: string, threadId: number = 0, frameLevel: number = 0): Thenable<any> {
-		return this.sendCliCommand(command, threadId, frameLevel);
+		return new Promise((resolve, reject) => {
+			this.stdin(command, resolve);
+		});
 	}
 
-	sendCliCommand(command: string, threadId: number = 0, frameLevel: number = 0): Thenable<void> {
-		return new Promise((resolve, reject) => {
-			this.stdin(command);
+	evalCobField(cName: string): Thenable<MINode> {
+		return new Promise(async (resolve, reject) => {
+			const sel = this.currentToken++;
+			this.handlers[sel] = (node: MINode) => {
+				resolve(node);
+			};
+			this.stdin(
+				`call (void)fprintf(stdout, \"${sel}^done,value=\\\"\")
+				 call (void)display_common(&${cName},stdout)
+				 call (void)fprintf(stdout, \"\\\"\\n\")\ncall fflush(stdout)`);
 		});
 	}
 
