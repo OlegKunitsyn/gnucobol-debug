@@ -7,7 +7,7 @@ const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*
 const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
-const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s\\:]+)\s+\*\//i;
+const fileCobolRegex = /\/\*\sGenerated from.*[\/\\]([0-9a-z_\-\/\.\s\\:]+)\s+\*\//i;
 const functionRegex = /\/\*\sProgram\slocal\svariables\sfor\s'(.*)'\s\*\//i;
 
 export class Line {
@@ -76,12 +76,12 @@ export class SourceMap {
 			}
 			match = attributeRegex.exec(line);
 			if (match) {
-				const attribute = new Attribute(VariableType[match[2]], parseInt(match[3]), parseInt(match[4]));
+				const attribute = new Attribute(match[1], VariableType[match[2]], parseInt(match[3]), parseInt(match[4]));
 				this.attributes.set(`${cleanedFile}.${match[1]}`, attribute);
 			}
 			match = dataStorageRegex.exec(line);
 			if (match) {
-				const dataStorage = new DebuggerVariable(match[3], match[2], functionName, new Attribute(VariableType[match[1]], 0, 0));
+				const dataStorage = new DebuggerVariable(match[3], match[2], functionName, new Attribute(null, VariableType[match[1]], 0, 0));
 				this.dataStorages.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}`, dataStorage);
@@ -178,11 +178,11 @@ export class SourceMap {
 		});
 
 		this.variablesByC.forEach((value, key) => {
-			out += `${key} > ${value.cobolName}\n`;
+			out += `${key}[${value.attribute?.cName}] > ${value.cobolName}\n`;
 		});
 
 		this.variablesByCobol.forEach((value, key) => {
-			out += `${key} > ${value.cName}\n`;
+			out += `${key}[${value.attribute?.cName}] > ${value.cName}\n`;
 		});
 
 		return out;
