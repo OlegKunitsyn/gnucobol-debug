@@ -658,7 +658,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		const functionName = await this.getCurrentFunctionName();
 
 		if (this.verbose)
-			this.log("stderr", "evalVariable");
+			this.log("stderr", "evalExpression");
 
 		try {
 			const variable = this.map.findVariableByCobol(functionName, name);
@@ -678,7 +678,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		const functionName = await this.getCurrentFunctionName();
 
 		if (this.verbose)
-			this.log("stderr", "expandField");
+			this.log("stderr", "evalCobField");
 
 		try {
 			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
