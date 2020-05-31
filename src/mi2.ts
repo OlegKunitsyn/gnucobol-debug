@@ -630,7 +630,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const cobolVariable = this.map.getVariableByC(`${functionName}.${key}`);
 
 			if (cobolVariable) {
-				cobolVariable.setValue(value);
+				try {
+					cobolVariable.setValue(value);
+				} catch (e) {
+					this.log("stderr", `Failing to set value on ${functionName}.${key}`);
+					this.log("stderr", e.message);
+					throw e;
+				}
 				currentFrameVariables.add(cobolVariable.getDataStorage());
 			}
 		}
@@ -654,18 +660,18 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 		const functionName = await this.getCurrentFunctionName();
 
-		const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
-		let command = "data-evaluate-expression ";
-		if (thread != 0) {
-			command += `--thread ${thread} --frame ${frame} `;
-		}
-		command += variable.cName;
-
-		if (variable.cName.startsWith("f_")) {
-			command += ".data";
-		}
-
 		try {
+			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
+
+			let command = "data-evaluate-expression ";
+			if (thread != 0) {
+				command += `--thread ${thread} --frame ${frame} `;
+			}
+			command += variable.cName;
+
+			if (variable.cName.startsWith("f_")) {
+				command += ".data";
+			}
 			const dataResponse = await this.sendCommand(command);
 			let value = dataResponse.result("value");
 			if (value === "0x0") {
@@ -675,10 +681,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 				value = response.result("value");
 			}
 			variable.setValue(value);
+
+			return variable;
 		} catch (e) {
+			this.log("stderr", `Failing to set value on ${functionName}.${name}`);
 			this.log("stderr", e.message);
+			throw e;
 		}
-		return variable;
 	}
 
 	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {

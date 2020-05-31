@@ -53,6 +53,7 @@ export enum VariableType {
 
 export class Attribute {
 	public constructor(
+		public cName: string,
 		public type: string,
 		public digits: number,
 		public scale: number) { }
