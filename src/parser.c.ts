@@ -142,6 +142,15 @@ export class SourceMap {
 		return null;
 	}
 
+	public findVariableByCobol(functionName: string, name: string): DebuggerVariable {
+		for (const key of this.variablesByCobol.keys()) {
+			if (key.startsWith(functionName) && key.endsWith(`.${name}`)) {
+				return this.variablesByCobol.get(key);
+			}
+		}
+		return null;
+	}
+
 	public getVariableByCobol(path: string): DebuggerVariable {
 		return this.variablesByCobol.get(path);
 	}

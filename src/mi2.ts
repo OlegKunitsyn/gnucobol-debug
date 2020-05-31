@@ -633,7 +633,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				try {
 					cobolVariable.setValue(value);
 				} catch (e) {
-					this.log("stderr", `Failing to set value on ${functionName}.${key}`);
+					this.log("stderr", `Failed to set value on ${functionName}.${key}`);
 					this.log("stderr", e.message);
 					throw e;
 				}
@@ -654,40 +654,66 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async evalExpression(name: string, thread: number, frame: number): Promise<DebuggerVariable> {
-		if (this.verbose)
-			this.log("stderr", "evalExpression");
-
+	async evalExpression(name: string, thread: number, frame: number): Promise<string> {
 		const functionName = await this.getCurrentFunctionName();
 
+		if (this.verbose)
+			this.log("stderr", "evalVariable");
+
 		try {
-			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
-
-			let command = "data-evaluate-expression ";
-			if (thread != 0) {
-				command += `--thread ${thread} --frame ${frame} `;
+			const variable = this.map.findVariableByCobol(functionName, name);
+			if(variable) {
+				await this.evalVariable(variable, thread, frame);
+				return variable.value;
 			}
-			command += variable.cName;
-
-			if (variable.cName.startsWith("f_")) {
-				command += ".data";
-			}
-			const dataResponse = await this.sendCommand(command);
-			let value = dataResponse.result("value");
-			if (value === "0x0") {
-				value = null;
-			} else if (variable.cName.startsWith("f_")) {
-				const response = await this.evalCobField(variable.cName);
-				value = response.result("value");
-			}
-			variable.setValue(value);
-
-			return variable;
+			return null;
 		} catch (e) {
-			this.log("stderr", `Failing to set value on ${functionName}.${name}`);
+			this.log("stderr", `Failed to find ${name}`);
 			this.log("stderr", e.message);
 			throw e;
 		}
+	}
+
+	async evalCobField(name: string, thread: number, frame: number): Promise<DebuggerVariable> {
+		const functionName = await this.getCurrentFunctionName();
+
+		if (this.verbose)
+			this.log("stderr", "expandField");
+
+		try {
+			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
+			return await this.evalVariable(variable, thread, frame);
+		} catch (e) {
+			this.log("stderr", `Failed to set value on ${functionName}.${name}`);
+			this.log("stderr", e.message);
+			throw e;
+		}
+	}
+
+	async evalVariable(variable: DebuggerVariable, thread: number, frame: number): Promise<DebuggerVariable> {
+		if (this.verbose)
+			this.log("stderr", "evalVariable");
+
+		let command = "data-evaluate-expression ";
+		if (thread != 0) {
+			command += `--thread ${thread} --frame ${frame} `;
+		}
+		command += variable.cName;
+
+		if (variable.cName.startsWith("f_")) {
+			command += ".data";
+		}
+		const dataResponse = await this.sendCommand(command);
+		let value = dataResponse.result("value");
+		if (value === "0x0") {
+			value = null;
+		} else if (variable.cName.startsWith("f_")) {
+			const response = await this.sendCobFieldEvalCommand(variable.cName);
+			value = response.result("value");
+		}
+		variable.setValue(value);
+
+		return variable;
 	}
 
 	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {
@@ -738,7 +764,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	evalCobField(cName: string): Thenable<MINode> {
+	sendCobFieldEvalCommand(cName: string): Thenable<MINode> {
 		return new Promise(async (resolve, reject) => {
 			const sel = this.currentToken++;
 			this.handlers[sel] = (node: MINode) => {

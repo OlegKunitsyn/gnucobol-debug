@@ -361,7 +361,7 @@ export class GDBDebugSession extends DebugSession {
 		} else if (typeof id == "string") {
 			try {
 				// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
-				const stackVariable = await this.miDebugger.evalExpression(id, 0, 0);
+				const stackVariable = await this.miDebugger.evalCobField(id, 0, 0);
 
 				const variables: DebugProtocol.Variable[] = [];
 				variables.push({
@@ -439,7 +439,7 @@ export class GDBDebugSession extends DebugSession {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
-					result: res.value || "null"
+					result: res || "not available"
 				};
 				this.sendResponse(response);
 			}, msg => {
