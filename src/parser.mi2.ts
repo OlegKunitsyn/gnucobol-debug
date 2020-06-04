@@ -189,6 +189,12 @@ export function parseMI(output: string): MINode {
 		return str;
 	};
 
+	const parseCobFieldValue = () => {
+		if (output[0] != '|')
+			return "";
+		return output.substr(1);
+	};
+
 	let parseValue, parseCommaResult, parseCommaValue, parseResult;
 
 	const parseTupleOrList = () => {
@@ -231,6 +237,8 @@ export function parseMI(output: string): MINode {
 			return parseCString();
 		else if (output[0] == '{' || output[0] == '[')
 			return parseTupleOrList();
+		else if (output[0] == '|')
+			return parseCobFieldValue();
 		else
 			return undefined;
 	};

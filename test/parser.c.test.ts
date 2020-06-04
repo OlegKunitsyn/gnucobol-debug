@@ -49,6 +49,15 @@ suite("C code parse", () => {
 		assert.equal('WS-BILL', parsed.getVariableByC('petstore_.b_14').cobolName);
 		assert.equal('TOTAL-QUANTITY', parsed.getVariableByC('petstore_.f_15').cobolName);
 	});
+	test("Find variables by function and COBOL name", () => {
+		const c = nativePath.resolve(cwd, 'petstore.c');
+		const parsed = new SourceMap(cwd, [c]);
+
+		assert.equal('f_15', parsed.findVariableByCobol('petstore_', 'TOTAL-QUANTITY').cName);
+		assert.equal('f_15', parsed.findVariableByCobol('petstore_', 'WS-BILL.TOTAL-QUANTITY').cName);
+		assert.equal(null, parsed.findVariableByCobol('petstore_', 'BLABLABLA'));
+		assert.equal(null, parsed.findVariableByCobol('blablaba_', 'WS-BILL.TOTAL-QUANTITY'));
+	});
 	test("Attributes", () => {
 		const c = nativePath.resolve(cwd, 'datatypes.c');
 		const parsed = new SourceMap(cwd, [c]);
