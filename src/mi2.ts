@@ -771,8 +771,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 				resolve(node);
 			};
 			this.stdin(
-				`call (void)fprintf(stdout, \"${sel}^done,value=|")
-				 call (void)cob_display(0,1,1,&${cName})`);
+				`call (void)printf("${sel}^done,value=|")
+				 call (void)cob_display(0,1,1,&${cName})`
+			);
 		});
 	}
 
