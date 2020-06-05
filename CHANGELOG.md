@@ -1,3 +1,6 @@
+## 0.31.20
+* Fix parsing values from GC to Debugger [Issue #35](https://github.com/OlegKunitsyn/gnucobol-debug/issues/35)
+
 ## 0.31.19
 * Fix watching of the value [Issue #35](https://github.com/OlegKunitsyn/gnucobol-debug/issues/35)
 
