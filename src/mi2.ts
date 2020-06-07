@@ -4,6 +4,7 @@ import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
 import { SourceMap } from "./parser.c";
+import { rejects } from "assert";
 
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
@@ -52,7 +53,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 	}
 
-	load(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any> {
+	load(cwd: string, target: string, targetargs: string[], group: string[], pid: string): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
@@ -72,8 +73,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 			const args = this.cobcArgs.concat([
 				'-g',
-				'-fsource-location',
-				'-ftraceall',
+				'-d',
 				'-Q',
 				'--coverage',
 				'-A',
@@ -124,7 +124,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-				const promises = this.initCommands(target, targetargs, cwd);
+				const promises = this.initCommands(target, targetargs, cwd, pid);
 				Promise.all(promises).then(() => {
 					this.emit("debug-ready");
 					resolve();
@@ -133,16 +133,25 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	protected initCommands(target: string, targetargs: string[], cwd: string) {
+	protected initCommands(target: string, targetargs: string[], cwd: string, pid: string) {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
-		const cmds = [
+		if (pid) {
+			return [
+				this.sendCommand("gdb-set target-async on", false),
+				this.sendCommand("gdb-set non-stop on", false),
+				this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
+				this.sendCommand(`target-attach ${pid}`, false),
+				this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false)
+			];
+		}
+		return [
 			this.sendCommand("gdb-set target-async on", false),
+			this.sendCommand("gdb-set non-stop on", false),
 			this.sendCommand("gdb-set args " + targetargs.join(' '), false),
 			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
 			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
 		];
-		return cmds;
 	}
 
 	connect(cwd: string, executable: string, target: string): Thenable<any> {
@@ -662,7 +671,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 		try {
 			const variable = this.map.findVariableByCobol(functionName, name);
-			if(variable) {
+			if (variable) {
 				await this.evalVariable(variable, thread, frame);
 				return variable.value;
 			}

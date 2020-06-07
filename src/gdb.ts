@@ -39,6 +39,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	verbose: boolean;
 	coverage: boolean;
 	container: string;
+	pid: string;
 }
 
 export class GDBDebugSession extends DebugSession {
@@ -83,7 +84,7 @@ export class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.load(args.cwd, args.target, args.targetargs, args.group).then(() => {
+		this.miDebugger.load(args.cwd, args.target, args.targetargs, args.group, args.pid).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);

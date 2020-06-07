@@ -133,6 +133,46 @@ Stop the container by `Ctrl+Shift+P` and command `GnuCOBOL Docker: stop`, or in 
 docker rm --force gnucobol
 ```
 
+### Attaching to a running process
+You may debug your COBOL program attaching to a running process.
+
+Add `pid` property to your `launch.json` and start debugging session (you can use a input variable to help like the sample below).
+
+Here's an example:
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "COBOL debugger",
+            "type": "gdb",
+            "request": "launch",
+            "target": "${file}",
+            "targetargs": [],
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "gdb",
+            "cobcpath": "cobc",
+            "cobcargs": ["-free", "-x"],
+            "group": [],
+            "coverage": false,
+            "pid": "${input:pid}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "pid",
+            "type": "promptString",
+            "description": "PID to attach"
+        }
+    ]
+}
+```
+
+Stop the container by `Ctrl+Shift+P` and command `GnuCOBOL Docker: stop`, or in the terminal:
+```bash
+docker rm --force gnucobol
+```
+
 ### Roadmap
 - Mac
 - Unit testing
