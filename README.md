@@ -168,11 +168,6 @@ Here's an example:
 }
 ```
 
-Stop the container by `Ctrl+Shift+P` and command `GnuCOBOL Docker: stop`, or in the terminal:
-```bash
-docker rm --force gnucobol
-```
-
 ### Roadmap
 - Mac
 - Unit testing
