@@ -42,7 +42,7 @@ suite("WATCH expression parse", () => {
     });
     test("it parses complex expressions", () => {
         const [actual, variables] = parseExpression("\"TOTAL-QUANTITY*TOTAL-QUANTITY\".substring(0,1) + ((2*TOTAL-QUANTITY) - TOTAL-QUANTITY + WS-BILL.TOTAL-COST.length) + (TOTAL-COST.toLowerCase()) + WS-BILL.TOTAL-QUANTITY", functionName, parsed);
-        const expected = "\"TOTAL-QUANTITY*TOTAL-QUANTITY\" .substring ( 0 , 1 ) + ( ( 2 * f_15 ) - f_15 + f_16.length ) + ( f_16.toLowerCase ( ) ) + f_15";
+        const expected = "\"TOTAL-QUANTITY*TOTAL-QUANTITY\" .substring ( 0 , 1 ) + ( ( 2 * f_15 ) - f_15 + f_16 .length ) + ( f_16 .toLowerCase ( ) ) + f_15";
         assert.equal(actual, expected);
         assert.deepEqual(variables, ["f_15", "f_16"]);
     });

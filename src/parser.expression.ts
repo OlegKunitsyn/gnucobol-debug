@@ -23,7 +23,7 @@ function checkToken(token: string, tokenStack: string[], functionName: string, s
                 return "";
             }
 
-            position = variableName.lastIndexOf(".", position);
+            position = variableName.lastIndexOf(".");
 
             if (position !== -1) {
                 variableName = variableName.substring(0, position);

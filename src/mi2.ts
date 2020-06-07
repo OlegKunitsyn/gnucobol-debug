@@ -4,6 +4,7 @@ import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
 import { SourceMap } from "./parser.c";
+import { parseExpression } from "./parser.expression";
 
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
@@ -654,21 +655,25 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	async evalExpression(name: string, thread: number, frame: number): Promise<string> {
+	async evalExpression(expression: string, thread: number, frame: number): Promise<string> {
 		const functionName = await this.getCurrentFunctionName();
 
 		if (this.verbose)
 			this.log("stderr", "evalExpression");
 
 		try {
-			const variable = this.map.findVariableByCobol(functionName, name);
-			if(variable) {
-				await this.evalVariable(variable, thread, frame);
-				return variable.value;
+			let [finalExpression, variableNames] = parseExpression(expression, functionName, this.map);
+
+			for (let variableName of variableNames) {
+				const variable = this.map.getVariableByC(`${functionName}.${variableName}`);
+				if (variable) {
+					await this.evalVariable(variable, thread, frame);
+					finalExpression = `const ${variableName}=${variable.value};` + finalExpression;
+				}
 			}
-			return null;
+			return eval(finalExpression);
 		} catch (e) {
-			this.log("stderr", `Failed to find ${name}`);
+			this.log("stderr", `Failed to find ${expression}`);
 			this.log("stderr", e.message);
 			throw e;
 		}
