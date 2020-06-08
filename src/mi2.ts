@@ -53,7 +53,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 	}
 
-	load(cwd: string, target: string, targetargs: string[], group: string[], pid: string): Thenable<any> {
+	load(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
@@ -124,7 +124,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-				const promises = this.initCommands(target, targetargs, cwd, pid);
+				const promises = this.initCommands(target, targetargs, cwd);
 				Promise.all(promises).then(() => {
 					this.emit("debug-ready");
 					resolve();
@@ -133,21 +133,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	protected initCommands(target: string, targetargs: string[], cwd: string, pid: string) {
+	protected initCommands(target: string, targetargs: string[], cwd: string) {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
-		if (pid) {
-			return [
-				this.sendCommand("gdb-set target-async on", false),
-				this.sendCommand("gdb-set non-stop on", false),
-				this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
-				this.sendCommand(`target-attach ${pid}`, false),
-				this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false)
-			];
-		}
+
 		return [
 			this.sendCommand("gdb-set target-async on", false),
-			this.sendCommand("gdb-set non-stop on", false),
 			this.sendCommand("gdb-set args " + targetargs.join(' '), false),
 			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
 			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
@@ -301,7 +292,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 									} else {
 										if (this.verbose)
 											this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
-										this.emit("stopped", parsed);
+
+										if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
+											this.continue();
+										} else {
+											this.emit("stopped", parsed);
+										}
 									}
 								} else {
 									if (this.verbose)
@@ -328,18 +324,27 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	start(): Thenable<boolean> {
+	start(pid?: string): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
 				return;
 			}
 			this.once("ui-break-done", () => {
-				this.sendCommand("exec-run").then((info) => {
-					if (info.resultRecords.resultClass == "running")
-						resolve();
-					else
-						reject();
-				}, reject);
+				if (pid) {
+					this.sendCommand(`target-attach ${pid}`).then((info) => {
+						if (info.resultRecords.resultClass == "done")
+							resolve();
+						else
+							reject();
+					}, reject);
+				} else {
+					this.sendCommand("exec-run").then((info) => {
+						if (info.resultRecords.resultClass == "running")
+							resolve();
+						else
+							reject();
+					}, reject);
+				}
 			});
 		});
 	}
@@ -781,7 +786,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			};
 			this.stdin(
 				`call (void)printf("${sel}^done,value=|")
-				 call (void)cob_display(0,1,1,&${cName})`
+				 call (void)cob_display(1,1,1,&${cName})`
 			);
 		});
 	}
