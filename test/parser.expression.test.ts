@@ -46,4 +46,29 @@ suite("WATCH expression parse", () => {
         assert.equal(actual, expected);
         assert.deepEqual(variables, ["f_15", "f_16"]);
     });
+    test("it removes zeroes from the beggining of a positive value", () => {
+        const [actual] = parseExpression("+000022", functionName, parsed);
+        const expected = "22";
+        assert.equal(actual, expected);
+    });
+    test("it removes zeroes from the beggining of a negative value", () => {
+        const [actual] = parseExpression("-000022", functionName, parsed);
+        const expected = "-22";
+        assert.equal(actual, expected);
+    });
+    test("it works for +0000.1234", () => {
+        const [actual] = parseExpression("+0000.1234", functionName, parsed);
+        const expected = "0.1234";
+        assert.equal(actual, expected);
+    });
+    test("it works for -0000.1234", () => {
+        const [actual] = parseExpression("-0000.1234", functionName, parsed);
+        const expected = "-0.1234";
+        assert.equal(actual, expected);
+    });
+    test("it works for 0", () => {
+        const [actual] = parseExpression("0", functionName, parsed);
+        const expected = "0";
+        assert.equal(actual, expected);
+    });
 });

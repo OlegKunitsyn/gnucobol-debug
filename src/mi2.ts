@@ -4,7 +4,7 @@ import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
 import { SourceMap } from "./parser.c";
-import { parseExpression } from "./parser.expression";
+import { parseExpression, replaceStartingZeroes } from "./parser.expression";
 
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
@@ -668,7 +668,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 				const variable = this.map.getVariableByC(`${functionName}.${variableName}`);
 				if (variable) {
 					await this.evalVariable(variable, thread, frame);
-					finalExpression = `const ${variableName}=${variable.value};` + finalExpression;
+					const value = replaceStartingZeroes(variable.value);
+					finalExpression = `const ${variableName}=${value};` + finalExpression;
 				}
 			}
 			return eval(finalExpression);
