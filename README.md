@@ -133,8 +133,10 @@ Stop the container by `Ctrl+Shift+P` and command `GnuCOBOL Docker: stop`, or in 
 docker rm --force gnucobol
 ```
 
-### Attaching to a running process
+### Attaching to a running process - EXPERIMENTAL
 You may debug your COBOL program attaching to a running process.
+
+This is an experimental feature, it doesn't display the variable values yet. For more details, please refer to [attach to a running process #3](https://github.com/OlegKunitsyn/gnucobol-debug/issues/3). 
 
 Add `pid` property to your `launch.json` and start debugging session (you can use a input variable to help like the sample below).
 
