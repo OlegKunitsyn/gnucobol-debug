@@ -674,7 +674,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			}
 			return eval(finalExpression);
 		} catch (e) {
-			this.log("stderr", `Failed to find ${expression}`);
+			this.log("stderr", `Failed to evaluate ${expression}`);
 			this.log("stderr", e.message);
 			throw e;
 		}
