@@ -159,22 +159,21 @@ export class Attribute {
 			return null;
 		}
 		switch (this.type) {
-			case 'group':
+			case 'Group':
 				return valueStr;
-			case 'boolean':
-			case 'numeric':
-			case 'numeric binary':
-			case 'numeric packed':
-			case 'numeric float':
-			case 'numeric double':
-			case 'numeric long double':
-			case 'numeric fp dec64':
-			case 'numeric fp dec128':
-			case 'numeric fp bin32':
-			case 'numeric fp bin64':
-			case 'numeric fp bin128':
-			case 'numeric comp5':
-			case 'integer':
+			case 'Boolean':
+			case 'Numeric':
+			case 'Numeric binary':
+			case 'Numeric packed':
+			case 'Numeric float':
+			case 'Numeric double':
+			case 'Numeric long double':
+			case 'Numeric FP DEC64':
+			case 'Numeric FP DEC128':
+			case 'Numeric FP BIN32':
+			case 'Numeric FP BIN64':
+			case 'Numeric FP BIN128':
+			case 'Numeric COMP5':
 				return removeLeadingZeroes(valueStr);
 			default:
 				return `"${valueStr.trim()}"`;
