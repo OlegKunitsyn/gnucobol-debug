@@ -21,6 +21,7 @@ An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplac
 * Setting breakpoints
 * Continue, Stop, Restart, Step Over, Step Into, Step Out
 * Variables pane
+* Watch pane with expressions
 * Code coverage
 * No mainframe required
 * GnuCOBOL Docker

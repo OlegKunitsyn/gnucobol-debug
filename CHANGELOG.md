@@ -1,3 +1,6 @@
+## 0.31.21
+* Implement expressions in Watch pane [Issue #44](https://github.com/OlegKunitsyn/gnucobol-debug/issues/44) by Bruno Pacheco
+
 ## 0.31.20
 * Fix parsing values from GC to Debugger [Issue #35](https://github.com/OlegKunitsyn/gnucobol-debug/issues/35)
 

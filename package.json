@@ -9,7 +9,7 @@
 		"debug",
 		"code coverage"
 	],
-	"version": "0.31.20",
+	"version": "0.31.21",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
