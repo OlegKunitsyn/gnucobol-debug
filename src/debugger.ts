@@ -1,5 +1,6 @@
 import { MINode } from "./parser.mi2";
 import { DebugProtocol } from "vscode-debugprotocol/lib/debugProtocol";
+import { removeLeadingZeroes } from "./parser.expression";
 
 export interface Breakpoint {
 	file?: string;
@@ -64,6 +65,7 @@ export class Attribute {
 		}
 		switch (this.type) {
 			case 'Group':
+				return valueStr;
 			case 'Boolean':
 			case 'Numeric':
 			case 'Numeric binary':
@@ -77,7 +79,7 @@ export class Attribute {
 			case 'Numeric FP BIN64':
 			case 'Numeric FP BIN128':
 			case 'Numeric COMP5':
-				return valueStr;
+				return removeLeadingZeroes(valueStr);
 			default:
 				return `"${valueStr.trim()}"`;
 		}

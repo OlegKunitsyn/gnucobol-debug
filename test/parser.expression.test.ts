@@ -71,4 +71,24 @@ suite("WATCH expression parse", () => {
         const expected = "0";
         assert.equal(actual, expected);
     });
+    test("it works for +10.00", () => {
+        const [actual] = parseExpression("+10.00", functionName, parsed);
+        const expected = "10.00";
+        assert.equal(actual, expected);
+    });
+    test("it works for +.003333", () => {
+        const [actual] = parseExpression("+.003333", functionName, parsed);
+        const expected = "0.003333";
+        assert.equal(actual, expected);
+    });
+    test("it works for -.003333", () => {
+        const [actual] = parseExpression("-.003333", functionName, parsed);
+        const expected = "-0.003333";
+        assert.equal(actual, expected);
+    });
+    test("it works for -000000000000000000000001", () => {
+        const [actual] = parseExpression("-000000000000000000000001", functionName, parsed);
+        const expected = "-1";
+        assert.equal(actual, expected);
+    });
 });

@@ -1,17 +1,18 @@
 import { SourceMap } from "./parser.c";
 
-const number = /[0-9]/;
+const numberOrDot = /[0-9.]/;
 const numberOrChar = /[a-z0-9]/i;
+const numberOrCharOrDot = /[a-z0-9.]/i;
 const containsCharacter = /(?=.*[a-zA-Z]).*/;
-const containsStartingZeroes = /^[-+]{0,1}0+/;
+const containsLeadingZeroes = /^[-+]{0,1}0*/;
 
-export function replaceStartingZeroes(value: string): string {
+export function removeLeadingZeroes(value: string): string {
     if (!value || value.startsWith("0x") || value.startsWith("\"")) {
         return value;
     }
     const negativeSign = value.startsWith("-") ? value.charAt(0) : "";
-    if (containsStartingZeroes.test(value)) {
-        let fixedValue = value.replace(containsStartingZeroes, "");
+    if (containsLeadingZeroes.test(value)) {
+        let fixedValue = value.replace(containsLeadingZeroes, "");
 
         if (fixedValue.length === 0 || fixedValue.startsWith(".")) {
             fixedValue = "0" + fixedValue;
@@ -48,7 +49,7 @@ function checkToken(token: string, tokenStack: string[], functionName: string, s
             }
         } while (position !== -1);
     } else {
-        token = replaceStartingZeroes(token);
+        token = removeLeadingZeroes(token);
     }
     tokenStack.push(token);
     return "";
@@ -93,7 +94,7 @@ export function parseExpression(expression: string, functionName: string, source
                 tokenStack.push(char);
                 continue;
             case '+':
-                if (number.test(expression[i + 1])) {
+                if (numberOrDot.test(expression[i + 1])) {
                     token += char;
                     continue;
                 }
@@ -101,7 +102,7 @@ export function parseExpression(expression: string, functionName: string, source
                 tokenStack.push(char);
                 continue;
             case '-':
-                if (numberOrChar.test(expression[i - 1]) || numberOrChar.test(expression[i + 1])) {
+                if (numberOrChar.test(expression[i - 1]) || numberOrCharOrDot.test(expression[i + 1])) {
                     token += char;
                     continue;
                 }
