@@ -25,6 +25,50 @@ export interface Stack {
 	line: number;
 }
 
+export enum CobFlag {
+	HAVE_SIGN,
+	SIGN_SEPARATE,
+	SIGN_LEADING,
+	BLANK_ZERO,
+	JUSTIFIED,
+	BINARY_SWAP,
+	REAL_BINARY,
+	IS_POINTER,
+	NO_SIGN_NIBBLE,
+	IS_FP,
+	REAL_SIGN,
+	BINARY_TRUNC,
+	CONSTANT
+}
+
+const flagMatchers = new Map<RegExp, CobFlag>();
+flagMatchers.set(/0x\d\d\d1/, CobFlag.HAVE_SIGN);
+flagMatchers.set(/0x\d\d\d2/, CobFlag.SIGN_SEPARATE);
+flagMatchers.set(/0x\d\d\d4/, CobFlag.SIGN_LEADING);
+flagMatchers.set(/0x\d\d\d8/, CobFlag.BLANK_ZERO);
+flagMatchers.set(/0x\d\d1\d/, CobFlag.JUSTIFIED);
+flagMatchers.set(/0x\d\d2\d/, CobFlag.BINARY_SWAP);
+flagMatchers.set(/0x\d\d4\d/, CobFlag.REAL_BINARY);
+flagMatchers.set(/0x\d\d8\d/, CobFlag.IS_POINTER);
+flagMatchers.set(/0x\d1\d\d/, CobFlag.NO_SIGN_NIBBLE);
+flagMatchers.set(/0x\d2\d\d/, CobFlag.IS_FP);
+flagMatchers.set(/0x\d4\d\d/, CobFlag.REAL_SIGN);
+flagMatchers.set(/0x\d8\d\d/, CobFlag.BINARY_TRUNC);
+flagMatchers.set(/0x1\d\d\d/, CobFlag.CONSTANT);
+
+export function getFlags(flagsStr: string): Set<CobFlag> {
+	if (!flagsStr) {
+		return new Set();
+	}
+	const flags = new Set<CobFlag>();
+	flagMatchers.forEach((flag, matcher) => {
+		if (matcher.test(flagsStr)) {
+			flags.add(flag);
+		}
+	});
+	return flags;
+}
+
 export enum VariableType {
 	'0x00' = 'Unknown',
 	'0x01' = 'Group',
@@ -48,16 +92,49 @@ export enum VariableType {
 	'0x23' = 'Alphanumeric edited',
 	'0x40' = 'National',
 	'0x41' = 'National edited',
-	'int' = 'Numeric',
+	'int' = 'Integer',
 	'cob_u8_t' = 'Group'
 }
 
 export class Attribute {
+	public flags: Set<CobFlag>;
+
 	public constructor(
 		public cName: string,
 		public type: string,
 		public digits: number,
-		public scale: number) { }
+		public scale: number,
+		flagStr?: string) {
+		this.flags = getFlags(flagStr);
+	}
+
+	public has(flag: CobFlag): boolean {
+		return this.flags.has(flag);
+	}
+
+	public getTypeDescription(size: string): string {
+		switch (this.type) {
+			case 'Group':
+				return `${this.type} (${size})`;
+			case 'Boolean':
+				return `Bit (${this.digits})`;
+			case 'Numeric binary':
+				if (this.has(CobFlag.IS_POINTER)) {
+					return 'Pointer';
+				}
+			case 'Numeric':
+			case 'Numeric packed':
+			case 'Numeric float':
+			case 'Numeric double':
+			case 'Numeric edited':
+				return `${this.type} (${this.has(CobFlag.HAVE_SIGN) ? 'signed' : 'unsigned'}, ${this.digits}, ${this.scale})`;
+			case 'Alphanumeric':
+			case 'National':
+				return `${this.type} (${size})`;
+			default:
+				return this.type;
+		}
+	}
 
 	public parse(valueStr: string): string {
 		if (!valueStr) {
@@ -79,6 +156,7 @@ export class Attribute {
 			case 'Numeric FP BIN64':
 			case 'Numeric FP BIN128':
 			case 'Numeric COMP5':
+			case 'Integer':
 				return removeLeadingZeroes(valueStr);
 			default:
 				return `"${valueStr.trim()}"`;
@@ -93,7 +171,7 @@ export class DebuggerVariable {
 		public cName: string,
 		public functionName: string,
 		public attribute: Attribute = null,
-		public size: number = null,
+		public size: string = null,
 		public value: string = null,
 		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
@@ -116,6 +194,10 @@ export class DebuggerVariable {
 
 	public setValue(value: string): void {
 		this.value = this.attribute.parse(value);
+	}
+
+	public getType(): string {
+		return this.attribute.getTypeDescription(this.size);
 	}
 }
 

@@ -345,8 +345,8 @@ export class GDBDebugSession extends DebugSession {
 				for (const stackVariable of stackVariables) {
 					variables.push({
 						name: stackVariable.cobolName,
-						type: stackVariable.attribute.type,
-						value: stackVariable.attribute.type,
+						type: stackVariable.getType(),
+						value: stackVariable.getType(),
 						variablesReference: this.variableHandles.create(stackVariable.cobolName)
 					});
 				}
@@ -366,15 +366,15 @@ export class GDBDebugSession extends DebugSession {
 				const variables: DebugProtocol.Variable[] = [];
 				variables.push({
 					name: 'Value',
-					type: stackVariable.attribute.type,
+					type: stackVariable.getType(),
 					value: stackVariable.value || "null",
 					variablesReference: 0
 				});
 				for (const child of stackVariable.children.values()) {
 					variables.push({
 						name: child.cobolName,
-						type: child.attribute.type,
-						value: child.attribute.type,
+						type: child.getType(),
+						value: child.getType(),
 						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
 					});
 				}
