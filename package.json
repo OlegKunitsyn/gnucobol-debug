@@ -136,6 +136,72 @@
 								"default": false
 							}
 						}
+					},
+					"attach": {
+						"required": [
+							"target",
+							"gdbpath",
+							"cobcpath",
+							"targetargs",
+							"cwd",
+							"group",
+							"pid"
+						],
+						"properties": {
+							"target": {
+								"type": "string",
+								"description": "Path to executable",
+								"default": "${file}"
+							},
+							"targetargs": {
+								"type": "array",
+								"description": "Extra arguments for executable",
+								"default": []
+							},
+							"cwd": {
+								"type": "string",
+								"description": "Path to project",
+								"default": "${workspaceRoot}"
+							},
+							"gdbpath": {
+								"type": "string",
+								"description": "Path to gdb",
+								"default": "gdb"
+							},
+							"cobcpath": {
+								"type": "string",
+								"description": "Path to cobc",
+								"default": "cobc"
+							},
+							"cobcargs": {
+								"type": "array",
+								"description": "Extra arguments for cobc",
+								"default": [
+									"-free",
+									"-x"
+								]
+							},
+							"group": {
+								"type": "array",
+								"description": "Compilation Group for executable",
+								"default": []
+							},
+							"env": {
+								"type": "object",
+								"description": "Environment variables",
+								"default": null
+							},
+							"verbose": {
+								"type": "boolean",
+								"description": "Debug GDB",
+								"default": false
+							},
+							"pid": {
+								"type": "string",
+								"description": "PID of the executable",
+								"default": null
+							}
+						}
 					}
 				},
 				"initialConfigurations": [
@@ -154,6 +220,22 @@
 						],
 						"group": [],
 						"coverage": true
+					},
+					{
+						"name": "Attach COBOL debugger",
+						"type": "gdb",
+						"request": "attach",
+						"target": "${file}",
+						"targetargs": [],
+						"cwd": "${workspaceRoot}",
+						"gdbpath": "gdb",
+						"cobcpath": "cobc",
+						"cobcargs": [
+							"-free",
+							"-x"
+						],
+						"group": [],
+						"pid": "${input:pid}"
 					}
 				]
 			}

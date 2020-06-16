@@ -113,7 +113,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 					this.log("stderr", this.map.toString());
 				}
 
-				target = nativePath.resolve(cwd, nativePath.basename(target));
 				if (process.platform === "win32") {
 					target = target.split('.').slice(0, -1).join('.') + '.exe';
 				} else {
@@ -134,6 +133,64 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
+	attach(cwd: string, target: string, targetargs: string[], group: string[], pid: string): Thenable<any> {
+		if (!nativePath.isAbsolute(target))
+			target = nativePath.join(cwd, target);
+		group.forEach(e => { e = nativePath.join(cwd, e); });
+
+		return new Promise((resolve, reject) => {
+			const args = this.cobcArgs.concat([
+				'-g',
+				'-fsource-location',
+				'-ftraceall',
+				'-v',
+				target
+			]).concat(group);
+			const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
+			buildProcess.stderr.on('data', (data) => {
+				if (this.verbose)
+					this.log("stderr", data);
+			});
+			buildProcess.on('exit', (code) => {
+				if (code !== 0) {
+					this.emit("quit");
+					return;
+				}
+
+				if (this.verbose)
+					this.log("stderr", `COBOL file ${target} compiled with exit code: ${code}`);
+
+				try {
+					this.map = new SourceMap(cwd, [target].concat(group));
+				} catch (e) {
+					this.log('stderr', e);
+				}
+
+				if (this.verbose) {
+					this.log("stderr", this.map.toString());
+				}
+
+				if (process.platform === "win32") {
+					target = target.split('.').slice(0, -1).join('.') + '.exe';
+				} else {
+					target = target.split('.').slice(0, -1).join('.');
+				}
+
+				this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, { cwd: cwd, env: this.procEnv });
+				this.process.stdout.on("data", this.stdout.bind(this));
+				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
+				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
+				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
+				const promises = this.initCommands(target, targetargs, cwd);
+				promises.push(this.sendCommand("target-attach " + pid, false));
+				Promise.all(promises).then(() => {
+					this.emit("debug-ready");
+					resolve();
+				}, reject);
+			});
+		});
+	}
+
 	protected initCommands(target: string, targetargs: string[], cwd: string) {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
@@ -144,31 +201,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
 		];
 		return cmds;
-	}
-
-	connect(cwd: string, executable: string, target: string): Thenable<any> {
-		return new Promise((resolve, reject) => {
-			let args = [];
-			if (executable && !nativePath.isAbsolute(executable))
-				executable = nativePath.join(cwd, executable);
-			if (executable)
-				args = args.concat([executable], this.gdbArgs);
-			else
-				args = this.gdbArgs;
-			this.process = ChildProcess.spawn(this.gdbpath, args, { cwd: cwd, env: this.procEnv });
-			this.process.stdout.on("data", this.stdout.bind(this));
-			this.process.stderr.on("data", this.stderr.bind(this));
-			this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
-			this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
-			Promise.all([
-				this.sendCommand("gdb-set target-async on"),
-				this.sendCommand("environment-directory \"" + escape(cwd) + "\""),
-				this.sendCommand("target-select remote " + target)
-			]).then(() => {
-				this.emit("debug-ready");
-				resolve();
-			}, reject);
-		});
 	}
 
 	stdout(data) {

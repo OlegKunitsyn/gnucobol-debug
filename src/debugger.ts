@@ -121,7 +121,7 @@ export class DebuggerVariable {
 
 export interface IDebugger {
 	load(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any>;
-	connect(cwd: string, executable: string, target: string): Thenable<any>;
+	attach(cwd: string, target: string, targetargs: string[], group: string[], pid: string): Thenable<any>;
 	start(): Thenable<boolean>;
 	stop(): void;
 	detach(): void;
