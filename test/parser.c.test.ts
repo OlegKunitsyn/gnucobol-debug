@@ -75,7 +75,7 @@ suite("C code parse", () => {
 		}
 
 		const variable = parsed.getVariableByCobol('datatypes_.numeric-data.dispp');
-		assert.equal('Numeric', variable.attribute.type);
+		assert.equal('numeric', variable.attribute.type);
 		assert.equal(8, variable.attribute.digits);
 		assert.equal(8, variable.attribute.scale);
 	});

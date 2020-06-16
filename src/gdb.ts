@@ -345,8 +345,7 @@ export class GDBDebugSession extends DebugSession {
 				for (const stackVariable of stackVariables) {
 					variables.push({
 						name: stackVariable.cobolName,
-						type: stackVariable.getType(),
-						value: stackVariable.getType(),
+						value: stackVariable.displayableType,
 						variablesReference: this.variableHandles.create(stackVariable.cobolName)
 					});
 				}
@@ -363,18 +362,16 @@ export class GDBDebugSession extends DebugSession {
 				// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
 				const stackVariable = await this.miDebugger.evalCobField(id, 0, 0);
 
-				const variables: DebugProtocol.Variable[] = [];
-				variables.push({
-					name: 'Value',
-					type: stackVariable.getType(),
-					value: stackVariable.value || "null",
-					variablesReference: 0
-				});
+				let variables: DebugProtocol.Variable[] = [];
+
+				if (stackVariable.children.size == 0) {
+					variables = stackVariable.toDebugProtocolVariable();
+				}
+
 				for (const child of stackVariable.children.values()) {
 					variables.push({
 						name: child.cobolName,
-						type: child.getType(),
-						value: child.getType(),
+						value: child.displayableType,
 						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
 					});
 				}
