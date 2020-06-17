@@ -133,7 +133,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	attach(cwd: string, target: string, targetargs: string[], group: string[], pid: string): Thenable<any> {
+	attach(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
@@ -182,7 +182,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 				this.process.on("exit", (() => { this.emit("quit"); }).bind(this));
 				this.process.on("error", ((err) => { this.emit("launcherror", err); }).bind(this));
 				const promises = this.initCommands(target, targetargs, cwd);
-				promises.push(this.sendCommand("target-attach " + pid, false));
 				Promise.all(promises).then(() => {
 					this.emit("debug-ready");
 					resolve();
@@ -357,18 +356,27 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	start(): Thenable<boolean> {
+	start(pid?: string): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
 				return;
 			}
 			this.once("ui-break-done", () => {
-				this.sendCommand("exec-run").then((info) => {
-					if (info.resultRecords.resultClass == "running")
-						resolve();
-					else
-						reject();
-				}, reject);
+				if (pid) {
+					this.sendCommand(`target-attach ${pid}`).then((info) => {
+						if (info.resultRecords.resultClass == "done")
+							resolve();
+						else
+							reject();
+					}, reject);
+				} else {
+					this.sendCommand("exec-run").then((info) => {
+						if (info.resultRecords.resultClass == "running")
+							resolve();
+						else
+							reject();
+					}, reject);
+				}
 			});
 		});
 	}

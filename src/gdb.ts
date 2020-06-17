@@ -141,8 +141,18 @@ export class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.attach(args.cwd, args.target, args.targetargs, args.group, args.pid).then(() => {
+		this.miDebugger.attach(args.cwd, args.target, args.targetargs, args.group).then(() => {
+			setTimeout(() => {
+				this.miDebugger.emit("ui-break-done");
+			}, 50);
 			this.sendResponse(response);
+			this.miDebugger.start(args.pid).then(() => {
+				this.attached = true;
+				if (this.crashed)
+					this.handlePause(undefined);
+			}, err => {
+				this.sendErrorResponse(response, 100, `Failed to start MI Debugger: ${err.toString()}`);
+			});
 		}, err => {
 			this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`);
 		});
