@@ -323,12 +323,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 											this.log("stderr", "Program exited with code " + parsed.record("exit-code"));
 										this.emit("quit", parsed);
 									} else {
-										if (this.verbose)
-											this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
-
 										if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
 											this.continue();
 										} else {
+											if (this.verbose)
+												this.log("stderr", "Not implemented stop reason (assuming exception): " + reason);
 											this.emit("stopped", parsed);
 										}
 									}
