@@ -130,6 +130,8 @@ export class Attribute {
 			case 'numeric binary':
 				if (this.has(CobFlag.IS_POINTER)) {
 					type = "pointer";
+					details.push({ type: 'number', name: 'digits', value: `${this.digits}` });
+					break;
 				}
 			case 'numeric':
 			case 'numeric packed':
@@ -217,16 +219,18 @@ export class DebuggerVariable {
 		this.value = this.attribute.parse(value);
 	}
 
-	public toDebugProtocolVariable(): DebugProtocol.Variable[] {
+	public toDebugProtocolVariable(showDetails: boolean): DebugProtocol.Variable[] {
 		const result: DebugProtocol.Variable[] = [];
 
-		for (const detail of this.details) {
-			result.push({
-				name: detail.name,
-				type: detail.type,
-				value: detail.value,
-				variablesReference: 0
-			});
+		if (showDetails) {
+			for (const detail of this.details) {
+				result.push({
+					name: detail.name,
+					type: detail.type,
+					value: detail.value,
+					variablesReference: 0
+				});
+			}
 		}
 
 		result.push({

@@ -17,6 +17,7 @@ import { VariableObject } from './debugger';
 import { MINode } from './parser.mi2';
 import { MI2 } from './mi2';
 import { CoverageStatus } from './coverage';
+import { DebuggerSettings } from './settings';
 
 const STACK_HANDLES_START = 1000;
 const VAR_HANDLES_START = 512 * 256 + 1000;
@@ -53,8 +54,11 @@ export class GDBDebugSession extends DebugSession {
 	protected miDebugger: MI2;
 	coverageStatus: CoverageStatus;
 	private container: string;
+	private showVariableDetails: boolean;
+	private settings = new DebuggerSettings();
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
+		this.showVariableDetails = this.settings.displayVariableAttributes;
 		this.sendResponse(response);
 	}
 
@@ -365,7 +369,7 @@ export class GDBDebugSession extends DebugSession {
 				let variables: DebugProtocol.Variable[] = [];
 
 				if (stackVariable.children.size == 0) {
-					variables = stackVariable.toDebugProtocolVariable();
+					variables = stackVariable.toDebugProtocolVariable(this.showVariableDetails);
 				}
 
 				for (const child of stackVariable.children.values()) {

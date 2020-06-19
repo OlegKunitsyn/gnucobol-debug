@@ -157,7 +157,19 @@
 					}
 				]
 			}
-		]
+		],
+		"configuration": {
+			"type": "object",
+			"title": "COBOL Debugger",
+			"properties": {
+				"Cobol_Debugger.display_variable_attributes": {
+					"type": "boolean",
+					"default": true,
+					"description": "Displaying Data Storages and Fields attributes(e.g. size of Alphanumerics or digits and scale of numerics).",
+					"scope": "resource"
+				}
+			}
+		}
 	},
 	"scripts": {
 		"prepublish": "tsc -p ./",
