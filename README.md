@@ -140,14 +140,13 @@ You may debug your COBOL program attaching to a running process.
 This is an experimental feature, it doesn't display the variable values yet. For more details, please refer to [attach to a running process #3](https://github.com/OlegKunitsyn/gnucobol-debug/issues/3). 
 
 Add `pid` property to your `launch.json` and start debugging session (you can use a input variable to help like the sample below).
-
 Here's an example:
 ```json
 {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "COBOL debugger (Attach)",
+            "name": "COBOL debugger attach",
             "type": "gdb",
             "request": "attach",
             "target": "${file}",
@@ -155,9 +154,10 @@ Here's an example:
             "cwd": "${workspaceRoot}",
             "gdbpath": "gdb",
             "cobcpath": "cobc",
-            "cobcargs": ["-x", "-C"],
+            "cobcargs": [
+                "-free"
+            ],
             "group": [],
-            "coverage": false,
             "pid": "${input:pid}"
         }
     ],
