@@ -1,7 +1,7 @@
 {
 	"name": "gnucobol-debug",
 	"displayName": "COBOL debugger",
-	"description": "Debug or execute COBOL code. No mainframe required. Beta.",
+	"description": "Debug or execute COBOL code. No mainframe required.",
 	"keywords": [
 		"cobol",
 		"gnucobol",
