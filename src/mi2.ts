@@ -113,6 +113,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 					this.log("stderr", this.map.toString());
 				}
 
+				target = nativePath.resolve(cwd, nativePath.basename(target));
 				if (process.platform === "win32") {
 					target = target.split('.').slice(0, -1).join('.') + '.exe';
 				} else {
@@ -170,6 +171,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 					this.log("stderr", this.map.toString());
 				}
 
+				target = nativePath.resolve(cwd, nativePath.basename(target));
 				if (process.platform === "win32") {
 					target = target.split('.').slice(0, -1).join('.') + '.exe';
 				} else {
