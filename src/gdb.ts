@@ -17,6 +17,7 @@ import { VariableObject } from './debugger';
 import { MINode } from './parser.mi2';
 import { MI2 } from './mi2';
 import { CoverageStatus } from './coverage';
+import { DebuggerSettings } from './settings';
 
 const STACK_HANDLES_START = 1000;
 const VAR_HANDLES_START = 512 * 256 + 1000;
@@ -53,8 +54,11 @@ export class GDBDebugSession extends DebugSession {
 	protected miDebugger: MI2;
 	coverageStatus: CoverageStatus;
 	private container: string;
+	private showVariableDetails: boolean;
+	private settings = new DebuggerSettings();
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
+		this.showVariableDetails = this.settings.displayVariableAttributes;
 		this.sendResponse(response);
 	}
 
@@ -345,8 +349,7 @@ export class GDBDebugSession extends DebugSession {
 				for (const stackVariable of stackVariables) {
 					variables.push({
 						name: stackVariable.cobolName,
-						type: stackVariable.attribute.type,
-						value: stackVariable.attribute.type,
+						value: stackVariable.displayableType,
 						variablesReference: this.variableHandles.create(stackVariable.cobolName)
 					});
 				}
@@ -363,18 +366,16 @@ export class GDBDebugSession extends DebugSession {
 				// TODO: this evals on an (effectively) unknown thread for multithreaded programs.
 				const stackVariable = await this.miDebugger.evalCobField(id, 0, 0);
 
-				const variables: DebugProtocol.Variable[] = [];
-				variables.push({
-					name: 'Value',
-					type: stackVariable.attribute.type,
-					value: stackVariable.value || "null",
-					variablesReference: 0
-				});
+				let variables: DebugProtocol.Variable[] = [];
+
+				if (stackVariable.children.size == 0) {
+					variables = stackVariable.toDebugProtocolVariable(this.showVariableDetails);
+				}
+
 				for (const child of stackVariable.children.values()) {
 					variables.push({
 						name: child.cobolName,
-						type: child.attribute.type,
-						value: child.attribute.type,
+						value: child.displayableType,
 						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
 					});
 				}

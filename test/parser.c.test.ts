@@ -71,10 +71,11 @@ suite("C code parse", () => {
 			assert.notEqual(variable.attribute.digits, undefined);
 			assert.notEqual(variable.attribute.scale, null);
 			assert.notEqual(variable.attribute.scale, undefined);
+			assert.notEqual(variable.attribute.flags, undefined);
 		}
 
 		const variable = parsed.getVariableByCobol('datatypes_.numeric-data.dispp');
-		assert.equal('Numeric', variable.attribute.type);
+		assert.equal('numeric', variable.attribute.type);
 		assert.equal(8, variable.attribute.digits);
 		assert.equal(8, variable.attribute.scale);
 	});

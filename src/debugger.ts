@@ -25,60 +25,156 @@ export interface Stack {
 	line: number;
 }
 
+export enum CobFlag {
+	HAVE_SIGN,
+	SIGN_SEPARATE,
+	SIGN_LEADING,
+	BLANK_ZERO,
+	JUSTIFIED,
+	BINARY_SWAP,
+	REAL_BINARY,
+	IS_POINTER,
+	NO_SIGN_NIBBLE,
+	IS_FP,
+	REAL_SIGN,
+	BINARY_TRUNC,
+	CONSTANT
+}
+
+const flagMatchers = new Map<RegExp, CobFlag>();
+flagMatchers.set(/0x\d\d\d1/, CobFlag.HAVE_SIGN);
+flagMatchers.set(/0x\d\d\d2/, CobFlag.SIGN_SEPARATE);
+flagMatchers.set(/0x\d\d\d4/, CobFlag.SIGN_LEADING);
+flagMatchers.set(/0x\d\d\d8/, CobFlag.BLANK_ZERO);
+flagMatchers.set(/0x\d\d1\d/, CobFlag.JUSTIFIED);
+flagMatchers.set(/0x\d\d2\d/, CobFlag.BINARY_SWAP);
+flagMatchers.set(/0x\d\d4\d/, CobFlag.REAL_BINARY);
+flagMatchers.set(/0x\d\d8\d/, CobFlag.IS_POINTER);
+flagMatchers.set(/0x\d1\d\d/, CobFlag.NO_SIGN_NIBBLE);
+flagMatchers.set(/0x\d2\d\d/, CobFlag.IS_FP);
+flagMatchers.set(/0x\d4\d\d/, CobFlag.REAL_SIGN);
+flagMatchers.set(/0x\d8\d\d/, CobFlag.BINARY_TRUNC);
+flagMatchers.set(/0x1\d\d\d/, CobFlag.CONSTANT);
+
+export interface VariableDetail {
+	type: string,
+	name: string,
+	value: string
+}
+
 export enum VariableType {
-	'0x00' = 'Unknown',
-	'0x01' = 'Group',
-	'0x02' = 'Boolean',
-	'0x10' = 'Numeric',
-	'0x11' = 'Numeric binary',
-	'0x12' = 'Numeric packed',
-	'0x13' = 'Numeric float',
-	'0x14' = 'Numeric double',
-	'0x15' = 'Numeric l double',
-	'0x16' = 'Numeric FP DEC64',
-	'0x17' = 'Numeric FP DEC128',
-	'0x18' = 'Numeric FP BIN32',
-	'0x19' = 'Numeric FP BIN64',
-	'0x1A' = 'Numeric FP BIN128',
-	'0x1B' = 'Numeric COMP5',
-	'0x24' = 'Numeric edited',
-	'0x20' = 'Alphanumeric',
-	'0x21' = 'Alphanumeric',
-	'0x22' = 'Alphanumeric',
-	'0x23' = 'Alphanumeric edited',
-	'0x40' = 'National',
-	'0x41' = 'National edited',
-	'int' = 'Numeric',
-	'cob_u8_t' = 'Group'
+	'0x00' = 'unknown',
+	'0x01' = 'group',
+	'0x02' = 'boolean',
+	'0x10' = 'numeric',
+	'0x11' = 'numeric binary',
+	'0x12' = 'numeric packed',
+	'0x13' = 'numeric float',
+	'0x14' = 'numeric double',
+	'0x15' = 'numeric l double',
+	'0x16' = 'numeric FP DEC64',
+	'0x17' = 'numeric FP DEC128',
+	'0x18' = 'numeric FP BIN32',
+	'0x19' = 'numeric FP BIN64',
+	'0x1A' = 'numeric FP BIN128',
+	'0x1B' = 'numeric COMP5',
+	'0x24' = 'numeric edited',
+	'0x20' = 'alphanumeric',
+	'0x21' = 'alphanumeric',
+	'0x22' = 'alphanumeric',
+	'0x23' = 'alphanumeric edited',
+	'0x40' = 'national',
+	'0x41' = 'national edited',
+	'int' = 'integer',
+	'cob_u8_t' = 'group'
 }
 
 export class Attribute {
+	public flags: Set<CobFlag>;
+
 	public constructor(
 		public cName: string,
 		public type: string,
 		public digits: number,
-		public scale: number) { }
+		public scale: number,
+		flagStr?: string) {
+		this.flags = this.buildFlags(flagStr);
+	}
+
+	public has(flag: CobFlag): boolean {
+		return this.flags.has(flag);
+	}
+
+	private buildFlags(flagsStr: string): Set<CobFlag> {
+		if (!flagsStr) {
+			return new Set();
+		}
+		const flags = new Set<CobFlag>();
+		flagMatchers.forEach((flag, matcher) => {
+			if (matcher.test(flagsStr)) {
+				flags.add(flag);
+			}
+		});
+		return flags;
+	}
+
+	public getDetails(size: string): [string, VariableDetail[]] {
+		const details: VariableDetail[] = [];
+		let type = this.type;
+
+		switch (this.type) {
+			case 'boolean':
+				type = "bit";
+				details.push({ type: 'number', name: 'digits', value: `${this.digits}` });
+				break;
+			case 'numeric binary':
+				if (this.has(CobFlag.IS_POINTER)) {
+					type = "pointer";
+					details.push({ type: 'number', name: 'digits', value: `${this.digits}` });
+					break;
+				}
+			case 'numeric':
+			case 'numeric packed':
+			case 'numeric float':
+			case 'numeric double':
+			case 'numeric edited':
+				details.push({ type: 'boolean', name: 'signed', value: `${this.has(CobFlag.HAVE_SIGN)}` });
+				details.push({ type: 'number', name: 'digits', value: `${this.digits}` });
+				details.push({ type: 'number', name: 'scale', value: `${this.scale}` });
+				break;
+			case 'group':
+			case 'alphanumeric':
+			case 'national':
+				details.push({ type: 'number', name: 'size', value: `${size}` });
+				break;
+			default:
+				break;
+		}
+
+		return [type, details];
+	}
 
 	public parse(valueStr: string): string {
 		if (!valueStr) {
 			return null;
 		}
 		switch (this.type) {
-			case 'Group':
+			case 'group':
 				return valueStr;
-			case 'Boolean':
-			case 'Numeric':
-			case 'Numeric binary':
-			case 'Numeric packed':
-			case 'Numeric float':
-			case 'Numeric double':
-			case 'Numeric long double':
-			case 'Numeric FP DEC64':
-			case 'Numeric FP DEC128':
-			case 'Numeric FP BIN32':
-			case 'Numeric FP BIN64':
-			case 'Numeric FP BIN128':
-			case 'Numeric COMP5':
+			case 'boolean':
+			case 'numeric':
+			case 'numeric binary':
+			case 'numeric packed':
+			case 'numeric float':
+			case 'numeric double':
+			case 'numeric long double':
+			case 'numeric fp dec64':
+			case 'numeric fp dec128':
+			case 'numeric fp bin32':
+			case 'numeric fp bin64':
+			case 'numeric fp bin128':
+			case 'numeric comp5':
+			case 'integer':
 				return removeLeadingZeroes(valueStr);
 			default:
 				return `"${valueStr.trim()}"`;
@@ -88,15 +184,20 @@ export class Attribute {
 
 export class DebuggerVariable {
 
+	public displayableType: string;
+	public details: VariableDetail[];
+
 	public constructor(
 		public cobolName: string,
 		public cName: string,
 		public functionName: string,
 		public attribute: Attribute = null,
-		public size: number = null,
+		public size: string = null,
 		public value: string = null,
 		public parent: DebuggerVariable = null,
-		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) { }
+		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) {
+		[this.displayableType, this.details] = this.attribute.getDetails(this.size);
+	}
 
 	public addChild(child: DebuggerVariable): void {
 		child.parent = this;
@@ -116,6 +217,29 @@ export class DebuggerVariable {
 
 	public setValue(value: string): void {
 		this.value = this.attribute.parse(value);
+	}
+
+	public toDebugProtocolVariable(showDetails: boolean): DebugProtocol.Variable[] {
+		const result: DebugProtocol.Variable[] = [];
+
+		if (showDetails) {
+			for (const detail of this.details) {
+				result.push({
+					name: detail.name,
+					type: detail.type,
+					value: detail.value,
+					variablesReference: 0
+				});
+			}
+		}
+
+		result.push({
+			name: 'value',
+			type: this.displayableType,
+			value: this.value || "null",
+			variablesReference: 0
+		});
+		return result;
 	}
 }
 
