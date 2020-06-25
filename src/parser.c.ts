@@ -3,8 +3,8 @@ import * as nativePath from "path";
 import { DebuggerVariable, Attribute, VariableType } from "./debugger";
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
-const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*([0-9-]*),\s*([0-9-]*),.*/i;
-const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)[;\[].*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
+const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*([0-9-]*),\s*([0-9-]*),\s*(0x\d{4}),.*/i;
+const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)(\;|\[\d+\]).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fileIncludeRegex = /#include\s+\"([0-9a-z_\-\.\s]+)\"/i;
 const fileCobolRegex = /\/\*\sGenerated from\s+([0-9a-z_\-\/\.\s\\:]+)\s+\*\//i;
@@ -76,12 +76,16 @@ export class SourceMap {
 			}
 			match = attributeRegex.exec(line);
 			if (match) {
-				const attribute = new Attribute(match[1], VariableType[match[2]], parseInt(match[3]), parseInt(match[4]));
+				const attribute = new Attribute(match[1], VariableType[match[2]], parseInt(match[3]), parseInt(match[4]), match[5]);
 				this.attributes.set(`${cleanedFile}.${match[1]}`, attribute);
 			}
 			match = dataStorageRegex.exec(line);
 			if (match) {
-				const dataStorage = new DebuggerVariable(match[3], match[2], functionName, new Attribute(null, VariableType[match[1]], 0, 0));
+				let size: number = null;
+				if (match[3].startsWith("[")) {
+					size = parseInt(match[3].substring(1, match[3].length - 1));
+				}
+				const dataStorage = new DebuggerVariable(match[4], match[2], functionName, new Attribute(null, VariableType[match[1]], 0, 0), size);
 				this.dataStorages.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}`, dataStorage);

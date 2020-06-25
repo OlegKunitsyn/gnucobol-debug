@@ -1,3 +1,7 @@
+## 0.31.22
+* Fix malformed linespec error [Issue #53](https://github.com/OlegKunitsyn/gnucobol-debug/issues/53) by Bruno Pacheco
+* Remove call of cob_display [Issue #54](https://github.com/OlegKunitsyn/gnucobol-debug/issues/54) by Bruno Pacheco
+
 ## 0.31.21
 * Implement expressions in Watch pane [Issue #44](https://github.com/OlegKunitsyn/gnucobol-debug/issues/44) by Bruno Pacheco
 
