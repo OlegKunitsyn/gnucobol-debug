@@ -190,9 +190,4 @@ suite("MI Parse", () => {
 		assert.deepEqual(undefined, MINode.valueOf(variables[0], "value"));
 		assert.deepEqual('unsigned char [3]', MINode.valueOf(variables[0], "type"));
 	});
-	test("parse special cob_display event", () => {
-		const parsed = parseMI(`12^done,value=|blablabla`);
-		const value = parsed.result('value');
-		assert.equal('blablabla', value);
-	});
 });

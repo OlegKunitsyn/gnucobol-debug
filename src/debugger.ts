@@ -25,6 +25,95 @@ export interface Stack {
 	line: number;
 }
 
+const repeatTimeRegex = /(\"\,\s|^)\'(\s|0)\'\s\<repeats\s(\d+)\stimes\>/i;
+export class CobolFieldDataParser {
+
+	public static parse(valueStr: string): string {
+		let value = valueStr;
+		if (value.indexOf(" ") === -1) {
+			return null;
+		}
+
+		value = value.substring(value.indexOf(" ") + 1);
+		if (value.startsWith("<")) {
+			if (value.indexOf(" ") === -1) {
+				return null;
+			}
+			value = value.substring(value.indexOf(" ") + 1);
+		}
+
+		const fieldMatch = repeatTimeRegex.exec(value);
+		if (fieldMatch) {
+			let replacement = "";
+			const size = parseInt(fieldMatch[3]);
+			for (let i = 0; i < size; i++) {
+				replacement += fieldMatch[2];
+			}
+			replacement += "\"";	
+			value = value.replace(repeatTimeRegex, replacement);	
+			if (!value.startsWith("\"")) {	
+				value = `"${value}`;	
+			}
+		}
+
+		return value;
+	}
+}
+
+export class NumericValueParser {
+
+	private static ZERO_SIGN_CHAR_CODE = 112;
+
+	public static parse(valueStr: string, fieldSize: number, scale: number): string {
+		let value = valueStr;
+		if (value.startsWith('"')) {
+			value = value.substring(1, fieldSize + 1);
+			const signCharCode = value.charCodeAt(value.length - 1);
+			let sign = "";
+			if (signCharCode >= this.ZERO_SIGN_CHAR_CODE) {
+				sign = "-";
+				value = `${value.substring(0, value.length - 1)}${signCharCode - this.ZERO_SIGN_CHAR_CODE}`
+			}
+			if (value.length < scale) {
+				const diff = scale - value.length;
+				let prefix = "";
+				for (let i = 0; i < diff; i++) {
+					prefix += "0";
+				}
+				value = prefix + value;
+			} else if (scale < 0) {
+				const diff = scale * -1;
+				let suffix = "";
+				for (let i = 0; i < diff; i++) {
+					suffix += "0";
+				}
+				value += suffix;
+			}
+			const wholeNumber = value.substring(0, value.length - scale);
+			const decimals = value.substring(value.length - scale);
+			let numericValue = `${sign}${wholeNumber}`;
+			if (decimals.length > 0) {
+				numericValue = `${numericValue}.${decimals}`;
+			}
+			return `${parseFloat(numericValue)}`;
+		}
+		return value;
+	}
+}
+
+export class AlphanumericValueParser {
+
+	public static parse(valueStr: string, fieldSize: number): string {
+		let value = valueStr;
+		let shift = 0;
+		if (value.startsWith('"')) {
+			shift = 1;
+		}
+		const size = Math.min(fieldSize + shift, valueStr.length - shift);
+		return `"${value.substring(shift, size).trim()}"`;
+	}
+}
+
 export enum CobFlag {
 	HAVE_SIGN,
 	SIGN_SEPARATE,
@@ -118,7 +207,7 @@ export class Attribute {
 		return flags;
 	}
 
-	public getDetails(size: string): [string, VariableDetail[]] {
+	public getDetails(size: number): [string, VariableDetail[]] {
 		const details: VariableDetail[] = [];
 		let type = this.type;
 
@@ -154,30 +243,27 @@ export class Attribute {
 		return [type, details];
 	}
 
-	public parse(valueStr: string): string {
+	public parse(valueStr: string, fieldSize: number): string {
+		if (!valueStr) {
+			return null;
+		}
+		if (valueStr.startsWith("0x")) {
+			valueStr = CobolFieldDataParser.parse(valueStr);
+		}
 		if (!valueStr) {
 			return null;
 		}
 		switch (this.type) {
-			case 'group':
-				return valueStr;
-			case 'boolean':
 			case 'numeric':
-			case 'numeric binary':
-			case 'numeric packed':
-			case 'numeric float':
-			case 'numeric double':
-			case 'numeric long double':
-			case 'numeric fp dec64':
-			case 'numeric fp dec128':
-			case 'numeric fp bin32':
-			case 'numeric fp bin64':
-			case 'numeric fp bin128':
-			case 'numeric comp5':
-			case 'integer':
-				return removeLeadingZeroes(valueStr);
+				return NumericValueParser.parse(valueStr, fieldSize, this.scale);
+			case 'numeric edited':
+			case 'alphanumeric':
+			case 'alphanumeric edited':
+			case 'national':
+			case 'national edited':
+				return AlphanumericValueParser.parse(valueStr, fieldSize);
 			default:
-				return `"${valueStr.trim()}"`;
+				return valueStr;
 		}
 	}
 }
@@ -192,7 +278,7 @@ export class DebuggerVariable {
 		public cName: string,
 		public functionName: string,
 		public attribute: Attribute = null,
-		public size: string = null,
+		public size: number = null,
 		public value: string = null,
 		public parent: DebuggerVariable = null,
 		public children: Map<string, DebuggerVariable> = new Map<string, DebuggerVariable>()) {
@@ -216,7 +302,7 @@ export class DebuggerVariable {
 	}
 
 	public setValue(value: string): void {
-		this.value = this.attribute.parse(value);
+		this.value = this.attribute.parse(value, this.size);
 	}
 
 	public toDebugProtocolVariable(showDetails: boolean): DebugProtocol.Variable[] {

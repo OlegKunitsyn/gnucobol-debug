@@ -717,9 +717,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 		let value = dataResponse.result("value");
 		if (value === "0x0") {
 			value = null;
-		} else if (variable.cName.startsWith("f_")) {
-			const response = await this.sendCobFieldEvalCommand(variable.cName);
-			value = response.result("value");
 		}
 		variable.setValue(value);
 
@@ -771,19 +768,6 @@ export class MI2 extends EventEmitter implements IDebugger {
 	sendUserInput(command: string, threadId: number = 0, frameLevel: number = 0): Thenable<any> {
 		return new Promise((resolve, reject) => {
 			this.stdin(command, resolve);
-		});
-	}
-
-	sendCobFieldEvalCommand(cName: string): Thenable<MINode> {
-		return new Promise(async (resolve, reject) => {
-			const sel = this.currentToken++;
-			this.handlers[sel] = (node: MINode) => {
-				resolve(node);
-			};
-			this.stdin(
-				`call (void)printf("${sel}^done,value=|")
-				 call (void)cob_display(0,1,1,&${cName})`
-			);
 		});
 	}
 
