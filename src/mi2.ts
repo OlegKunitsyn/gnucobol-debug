@@ -480,6 +480,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 			}
 
 			let map = this.map.getLineC(breakpoint.file, breakpoint.line);
+			if (map.fileC === '' && map.lineC === 0) {
+				return;
+			}
+
 			if (breakpoint.raw)
 				location += '"' + escape(breakpoint.raw) + '"';
 			else
