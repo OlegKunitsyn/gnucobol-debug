@@ -144,8 +144,7 @@
 							"cobcpath",
 							"targetargs",
 							"cwd",
-							"group",
-							"pid"
+							"group"
 						],
 						"properties": {
 							"target": {
@@ -199,6 +198,11 @@
 							"pid": {
 								"type": "string",
 								"description": "PID of the executable",
+								"default": null
+							},
+							"remoteDebugger": {
+								"type": "string",
+								"description": "GDB Server host:port",
 								"default": null
 							}
 						}

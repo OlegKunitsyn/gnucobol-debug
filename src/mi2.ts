@@ -357,27 +357,30 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	start(pid?: string): Thenable<boolean> {
+	start(attachTarget?: string): Thenable<boolean> {
 		return new Promise((resolve, reject) => {
 			if (!!this.noDebug) {
 				return;
 			}
 			this.once("ui-break-done", () => {
-				if (pid) {
-					this.sendCommand(`target-attach ${pid}`).then((info) => {
-						if (info.resultRecords.resultClass == "done")
-							resolve();
-						else
-							reject();
-					}, reject);
-				} else {
-					this.sendCommand("exec-run").then((info) => {
-						if (info.resultRecords.resultClass == "running")
-							resolve();
-						else
-							reject();
-					}, reject);
+				let command = "exec-run";
+				let expectingResultClass = "running";
+				if (!!attachTarget) {
+					if (/^d+$/.test(attachTarget)) {
+						command = `target-attach ${attachTarget}`;
+						expectingResultClass = "done";
+					} else {
+						command = `target-select remote ${attachTarget}`;
+						expectingResultClass = "connected";
+					}
 				}
+
+				this.sendCommand(command).then((info) => {
+					if (info.resultRecords.resultClass == expectingResultClass)
+						resolve();
+					else
+						reject();
+				}, reject);
 			});
 		});
 	}

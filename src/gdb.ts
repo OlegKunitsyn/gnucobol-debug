@@ -54,6 +54,7 @@ export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArgum
 	group: string[];
 	verbose: boolean;
 	pid: string;
+	remoteDebugger: string; 
 }
 
 export class GDBDebugSession extends DebugSession {
@@ -122,6 +123,11 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
+		if(!args.pid && !args.remoteDebugger) {
+			this.sendErrorResponse(response, 100, `Failed to start MI Debugger: pid or remoteDebugger is mandatory`);
+			return;
+		}
+
 		this.coverageStatus = undefined;
 		this.attached = true;
 		this.started = false;
@@ -150,7 +156,7 @@ export class GDBDebugSession extends DebugSession {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);
 			this.sendResponse(response);
-			this.miDebugger.start(args.pid).then(() => {
+			this.miDebugger.start(args.pid || args.remoteDebugger).then(() => {
 				this.attached = true;
 				if (this.crashed)
 					this.handlePause(undefined);

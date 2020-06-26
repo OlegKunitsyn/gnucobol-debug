@@ -135,7 +135,10 @@ docker rm --force gnucobol
 ```
 
 ### Attaching to a running process
-You may debug your COBOL program attaching to a running process. Add `pid` property to your `launch.json` and start debugging session (you can use a input variable to help like the sample below). 
+You may debug your COBOL program attaching to a running process. In order to achieve that, you have two options:
+
+#### Local Process
+Add `pid` property to your `launch.json` and start debugging session (you can use a input variable to help like the sample below). 
 Here's an example:
 ```json
 {
@@ -160,6 +163,30 @@ Here's an example:
             "id": "pid",
             "type": "promptString",
             "description": "PID to attach"
+        }
+    ]
+}
+```
+
+#### Remote Debugger (GDBServer)
+Add `remoteDebugger` property to your `launch.json`. 
+Here's an example:
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "COBOL debugger attach",
+            "type": "gdb",
+            "request": "attach",
+            "target": "${file}",
+            "targetargs": [],
+            "cwd": "${workspaceRoot}",
+            "gdbpath": "gdb",
+            "cobcpath": "cobc",
+            "cobcargs": ["-free", "-x"],
+            "group": [],
+            "remoteDebugger": "localhost:5555"
         }
     ]
 }
