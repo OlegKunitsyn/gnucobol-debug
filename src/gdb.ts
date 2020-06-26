@@ -42,6 +42,20 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	container: string;
 }
 
+export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArguments {
+	cwd: string;
+	target: string;
+	targetargs: string[];
+	gdbpath: string;
+	gdbargs: string[];
+	cobcpath: string;
+	cobcargs: string[];
+	env: any;
+	group: string[];
+	verbose: boolean;
+	pid: string;
+}
+
 export class GDBDebugSession extends DebugSession {
 	protected variableHandles = new Handles<string | VariableObject | ExtendedVariable>(VAR_HANDLES_START);
 	protected variableHandlesReverse: { [id: string]: number } = {};
@@ -49,6 +63,7 @@ export class GDBDebugSession extends DebugSession {
 	protected quit: boolean;
 	protected needContinue: boolean;
 	protected started: boolean;
+	protected attached: boolean;
 	protected crashed: boolean;
 	protected debugReady: boolean;
 	protected miDebugger: MI2;
@@ -67,6 +82,9 @@ export class GDBDebugSession extends DebugSession {
 			this.coverageStatus = undefined;
 		}
 		this.container = args.container;
+		this.started = false;
+		this.attached = false;
+
 		this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug);
 		this.miDebugger.on("launcherror", this.launchError.bind(this));
 		this.miDebugger.on("quit", this.quitEvent.bind(this));
@@ -83,7 +101,6 @@ export class GDBDebugSession extends DebugSession {
 		this.sendEvent(new InitializedEvent());
 		this.quit = false;
 		this.needContinue = false;
-		this.started = false;
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
@@ -94,6 +111,47 @@ export class GDBDebugSession extends DebugSession {
 			this.sendResponse(response);
 			this.miDebugger.start().then(() => {
 				this.started = true;
+				if (this.crashed)
+					this.handlePause(undefined);
+			}, err => {
+				this.sendErrorResponse(response, 100, `Failed to start MI Debugger: ${err.toString()}`);
+			});
+		}, err => {
+			this.sendErrorResponse(response, 103, `Failed to load MI Debugger: ${err.toString()}`);
+		});
+	}
+
+	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
+		this.coverageStatus = undefined;
+		this.attached = true;
+		this.started = false;
+
+		this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, false);
+		this.miDebugger.on("launcherror", this.launchError.bind(this));
+		this.miDebugger.on("quit", this.quitEvent.bind(this));
+		this.miDebugger.on("exited-normally", this.quitEvent.bind(this));
+		this.miDebugger.on("stopped", this.stopEvent.bind(this));
+		this.miDebugger.on("msg", this.handleMsg.bind(this));
+		this.miDebugger.on("breakpoint", this.handleBreakpoint.bind(this));
+		this.miDebugger.on("step-end", this.handleBreak.bind(this));
+		this.miDebugger.on("step-out-end", this.handleBreak.bind(this));
+		this.miDebugger.on("step-other", this.handleBreak.bind(this));
+		this.miDebugger.on("signal-stop", this.handlePause.bind(this));
+		this.miDebugger.on("thread-created", this.threadCreatedEvent.bind(this));
+		this.miDebugger.on("thread-exited", this.threadExitedEvent.bind(this));
+		this.sendEvent(new InitializedEvent());
+		this.quit = false;
+		this.needContinue = true;
+		this.crashed = false;
+		this.debugReady = false;
+		this.useVarObjects = false;
+		this.miDebugger.attach(args.cwd, args.target, args.targetargs, args.group).then(() => {
+			setTimeout(() => {
+				this.miDebugger.emit("ui-break-done");
+			}, 50);
+			this.sendResponse(response);
+			this.miDebugger.start(args.pid).then(() => {
+				this.attached = true;
 				if (this.crashed)
 					this.handlePause(undefined);
 			}, err => {
@@ -167,7 +225,10 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-		this.miDebugger.stop();
+		if (this.attached)
+			this.miDebugger.detach();
+		else
+			this.miDebugger.stop();
 		this.sendResponse(response);
 	}
 
