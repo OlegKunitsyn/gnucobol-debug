@@ -231,7 +231,8 @@
 						"gdbpath": "gdb",
 						"cobcpath": "cobc",
 						"cobcargs": [
-							"-free"
+							"-free",
+							"-x"
 						],
 						"group": [],
 						"pid": "${input:pid}"

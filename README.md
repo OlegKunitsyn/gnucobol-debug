@@ -154,9 +154,7 @@ Here's an example:
             "cwd": "${workspaceRoot}",
             "gdbpath": "gdb",
             "cobcpath": "cobc",
-            "cobcargs": [
-                "-free"
-            ],
+            "cobcargs": ["-free", "-x"],
             "group": [],
             "pid": "${input:pid}"
         }
