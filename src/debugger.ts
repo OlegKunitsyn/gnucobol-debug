@@ -49,10 +49,10 @@ export class CobolFieldDataParser {
 			for (let i = 0; i < size; i++) {
 				replacement += fieldMatch[2];
 			}
-			replacement += "\"";	
-			value = value.replace(repeatTimeRegex, replacement);	
-			if (!value.startsWith("\"")) {	
-				value = `"${value}`;	
+			replacement += "\"";
+			value = value.replace(repeatTimeRegex, replacement);
+			if (!value.startsWith("\"")) {
+				value = `"${value}`;
 			}
 		}
 
@@ -266,6 +266,37 @@ export class Attribute {
 				return valueStr;
 		}
 	}
+
+	public parseUsage(valueStr: string): string {
+		if (!valueStr) {
+			return null;
+		}
+		if (valueStr.startsWith("0x")) {
+			valueStr = CobolFieldDataParser.parse(valueStr);
+		}
+		if (!valueStr) {
+			return null;
+		}
+		switch (this.type) {
+			case 'boolean':
+			case 'numeric':
+			case 'numeric binary':
+			case 'numeric packed':
+			case 'numeric float':
+			case 'numeric double':
+			case 'numeric long double':
+			case 'numeric fp dec64':
+			case 'numeric fp dec128':
+			case 'numeric fp bin32':
+			case 'numeric fp bin64':
+			case 'numeric fp bin128':
+			case 'numeric comp5':
+			case 'integer':
+				return removeLeadingZeroes(valueStr.substring(1, valueStr.length - 1));
+			default:
+				return valueStr;
+		}
+	}
 }
 
 export class DebuggerVariable {
@@ -303,6 +334,10 @@ export class DebuggerVariable {
 
 	public setValue(value: string): void {
 		this.value = this.attribute.parse(value, this.size);
+	}
+
+	public setValueUsage(value: string): void {
+		this.value = this.attribute.parseUsage(value);
 	}
 
 	public toDebugProtocolVariable(showDetails: boolean): DebugProtocol.Variable[] {

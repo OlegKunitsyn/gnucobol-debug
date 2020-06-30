@@ -30,6 +30,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private errbuf: string;
 	private process: ChildProcess.ChildProcess;
 	private lastStepCommand: Function;
+	private hasUsageFunctions: boolean = false;
 
 	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
@@ -377,7 +378,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 				this.sendCommand(command).then((info) => {
 					if (info.resultRecords.resultClass == expectingResultClass)
-						resolve();
+						this.retrieveUsageFunctions().then(hasFunctions => {
+							this.hasUsageFunctions = hasFunctions;
+							resolve();
+						})
 					else
 						reject();
 				}, reject);
@@ -757,19 +761,41 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (thread != 0) {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
-		command += variable.cName;
 
-		if (variable.cName.startsWith("f_")) {
-			command += ".data";
+		if (this.hasUsageFunctions && variable.cName.startsWith("f_")) {
+			command += `"(char *)cob_get_field_str_buffered(&${variable.cName})"`;
+		} else if (variable.cName.startsWith("f_")) {
+			command += `${variable.cName}.data`;
+		} else {
+			command += variable.cName;
 		}
 		const dataResponse = await this.sendCommand(command);
 		let value = dataResponse.result("value");
 		if (value === "0x0") {
 			value = null;
 		}
-		variable.setValue(value);
+
+		if (this.hasUsageFunctions) {
+			variable.setValueUsage(value);
+		} else {
+			variable.setValue(value);
+		}
+
 
 		return variable;
+	}
+
+	async retrieveUsageFunctions(): Promise<boolean> {
+		if (this.verbose)
+			this.log("stderr", "hasUsageFunctions");
+
+		let command = "data-evaluate-expression cob_get_field_str_buffered";
+		try {
+			await this.sendCommand(command);
+			return true;
+		} catch (error) {
+			return false;
+		}
 	}
 
 	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {
