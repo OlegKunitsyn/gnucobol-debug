@@ -144,8 +144,7 @@
 							"cobcpath",
 							"targetargs",
 							"cwd",
-							"group",
-							"pid"
+							"group"
 						],
 						"properties": {
 							"target": {
@@ -200,6 +199,11 @@
 								"type": "string",
 								"description": "PID of the executable",
 								"default": null
+							},
+							"remoteDebugger": {
+								"type": "string",
+								"description": "GDB Server host:port",
+								"default": null
 							}
 						}
 					}
@@ -222,7 +226,7 @@
 						"coverage": true
 					},
 					{
-						"name": "COBOL debugger attach",
+						"name": "COBOL debugger attach local",
 						"type": "gdb",
 						"request": "attach",
 						"target": "${file}",
@@ -236,6 +240,22 @@
 						],
 						"group": [],
 						"pid": "${input:pid}"
+					},
+					{
+						"name": "COBOL debugger attach remote",
+						"type": "gdb",
+						"request": "attach",
+						"target": "${file}",
+						"targetargs": [],
+						"cwd": "${workspaceRoot}",
+						"gdbpath": "gdb",
+						"cobcpath": "cobc",
+						"cobcargs": [
+							"-free",
+							"-x"
+						],
+						"group": [],
+						"remoteDebugger": "${input:remoteDebugger}"
 					}
 				]
 			}
