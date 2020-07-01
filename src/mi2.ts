@@ -30,7 +30,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private errbuf: string;
 	private process: ChildProcess.ChildProcess;
 	private lastStepCommand: Function;
-	private hasUsageFunctions: boolean = false;
+	private hasCobFieldStringFunction: boolean = true;
 
 	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
@@ -378,10 +378,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 				this.sendCommand(command).then((info) => {
 					if (info.resultRecords.resultClass == expectingResultClass)
-						this.retrieveUsageFunctions().then(hasFunctions => {
-							this.hasUsageFunctions = hasFunctions;
-							resolve();
-						})
+						resolve();
 					else
 						reject();
 				}, reject);
@@ -762,25 +759,35 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		if (this.hasUsageFunctions && variable.cName.startsWith("f_")) {
+		if (this.hasCobFieldStringFunction && variable.cName.startsWith("f_")) {
 			command += `"(char *)cob_get_field_str_buffered(&${variable.cName})"`;
 		} else if (variable.cName.startsWith("f_")) {
 			command += `${variable.cName}.data`;
 		} else {
 			command += variable.cName;
 		}
-		const dataResponse = await this.sendCommand(command);
-		let value = dataResponse.result("value");
-		if (value === "0x0") {
-			value = null;
+
+		let dataResponse;
+		let value = null;
+		try {
+			dataResponse = await this.sendCommand(command);
+			value = dataResponse.result("value");
+			if (value === "0x0") {
+				value = null;
+			}
+		} catch (error) {
+			if (error.message.includes("cob_get_field_str_buffered")) {
+				this.hasCobFieldStringFunction = false;
+				return this.evalVariable(variable, thread, frame);
+			}
+			this.log("stderr", error.message);
 		}
 
-		if (this.hasUsageFunctions) {
+		if (this.hasCobFieldStringFunction) {
 			variable.setValueUsage(value);
 		} else {
 			variable.setValue(value);
 		}
-
 
 		return variable;
 	}
