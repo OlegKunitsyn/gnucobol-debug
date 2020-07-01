@@ -30,7 +30,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private errbuf: string;
 	private process: ChildProcess.ChildProcess;
 	private lastStepCommand: Function;
-	private hasCobFieldStringFunction: boolean = true;
+	private hasCobGetFieldStringFunction: boolean = true;
+	private hasCobPutFieldStringFunction: boolean = true;
 
 	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
@@ -486,10 +487,28 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	changeVariable(name: string, rawValue: string): Thenable<any> {
+	async changeVariable(name: string, rawValue: string): Promise<void> {
 		if (this.verbose)
 			this.log("stderr", "changeVariable");
-		return this.sendCommand("gdb-set var " + name + "=" + rawValue);
+
+		const functionName = await this.getCurrentFunctionName();
+
+		try {
+			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
+			if (this.hasCobPutFieldStringFunction) {
+				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \"${rawValue}\")"`);
+			} else {
+				await this.sendCommand(`gdb-set var ${variable.cName}=\"${rawValue}\"`);
+			}
+		} catch (e) {
+			if (e.message.includes("cob_put_field_str")) {
+				this.hasCobPutFieldStringFunction = false;
+				return this.changeVariable(name, rawValue);
+			}
+			this.log("stderr", `Failed to set cob field value on ${functionName}.${name}`);
+			this.log("stderr", e.message);
+			throw e;
+		}
 	}
 
 	loadBreakPoints(breakpoints: Breakpoint[]): Thenable<[boolean, Breakpoint][]> {
@@ -744,13 +763,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
 			return await this.evalVariable(variable, thread, frame);
 		} catch (e) {
-			this.log("stderr", `Failed to set value on ${functionName}.${name}`);
+			this.log("stderr", `Failed to eval cob field value on ${functionName}.${name}`);
 			this.log("stderr", e.message);
 			throw e;
 		}
 	}
 
-	async evalVariable(variable: DebuggerVariable, thread: number, frame: number): Promise<DebuggerVariable> {
+	private async evalVariable(variable: DebuggerVariable, thread: number, frame: number): Promise<DebuggerVariable> {
 		if (this.verbose)
 			this.log("stderr", "evalVariable");
 
@@ -759,7 +778,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			command += `--thread ${thread} --frame ${frame} `;
 		}
 
-		if (this.hasCobFieldStringFunction && variable.cName.startsWith("f_")) {
+		if (this.hasCobGetFieldStringFunction && variable.cName.startsWith("f_")) {
 			command += `"(char *)cob_get_field_str_buffered(&${variable.cName})"`;
 		} else if (variable.cName.startsWith("f_")) {
 			command += `${variable.cName}.data`;
@@ -777,13 +796,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 			}
 		} catch (error) {
 			if (error.message.includes("cob_get_field_str_buffered")) {
-				this.hasCobFieldStringFunction = false;
+				this.hasCobGetFieldStringFunction = false;
 				return this.evalVariable(variable, thread, frame);
 			}
 			this.log("stderr", error.message);
 		}
 
-		if (this.hasCobFieldStringFunction) {
+		if (this.hasCobGetFieldStringFunction) {
 			variable.setValueUsage(value);
 		} else {
 			variable.setValue(value);
@@ -792,58 +811,11 @@ export class MI2 extends EventEmitter implements IDebugger {
 		return variable;
 	}
 
-	async retrieveUsageFunctions(): Promise<boolean> {
-		if (this.verbose)
-			this.log("stderr", "hasUsageFunctions");
-
-		let command = "data-evaluate-expression cob_get_field_str_buffered";
-		try {
-			await this.sendCommand(command);
-			return true;
-		} catch (error) {
-			return false;
-		}
-	}
-
-	async varCreate(expression: string, name: string = "-"): Promise<VariableObject> {
-		if (this.verbose)
-			this.log("stderr", "varCreate");
-		const res = await this.sendCommand(`var-create ${name} @ "${expression}"`);
-		return new VariableObject(res.result(""));
-	}
-
-	async varEvalExpression(name: string): Promise<MINode> {
-		if (this.verbose)
-			this.log("stderr", "varEvalExpression");
-		return this.sendCommand(`var-evaluate-expression ${name}`);
-	}
-
-	async varListChildren(name: string): Promise<VariableObject[]> {
-		if (this.verbose)
-			this.log("stderr", "varListChildren");
-		//TODO: add `from` and `to` arguments
-		const res = await this.sendCommand(`var-list-children --all-values ${name}`);
-		const children = res.result("children") || [];
-		return children.map(child => new VariableObject(child[1]));
-	}
-
-	async varUpdate(name: string = "*"): Promise<MINode> {
-		if (this.verbose)
-			this.log("stderr", "varUpdate");
-		return this.sendCommand(`var-update --all-values ${name}`);
-	}
-
-	async varAssign(name: string, rawValue: string): Promise<MINode> {
-		if (this.verbose)
-			this.log("stderr", "varAssign");
-		return this.sendCommand(`var-assign ${name} ${rawValue}`);
-	}
-
-	logNoNewLine(type: string, msg: string) {
+	private logNoNewLine(type: string, msg: string): void {
 		this.emit("msg", type, msg);
 	}
 
-	log(type: string, msg: string) {
+	private log(type: string, msg: string): void {
 		this.emit("msg", type, msg[msg.length - 1] == '\n' ? msg : (msg + "\n"));
 	}
 
@@ -853,7 +825,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
+	private sendCommand(command: string, suppressFailure: boolean = false): Thenable<MINode> {
 		return new Promise((resolve, reject) => {
 			const sel = this.currentToken++;
 			this.handlers[sel] = (node: MINode) => {

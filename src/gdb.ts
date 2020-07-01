@@ -54,7 +54,7 @@ export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArgum
 	group: string[];
 	verbose: boolean;
 	pid: string;
-	remoteDebugger: string; 
+	remoteDebugger: string;
 }
 
 export class GDBDebugSession extends DebugSession {
@@ -123,7 +123,7 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		if(!args.pid && !args.remoteDebugger) {
+		if (!args.pid && !args.remoteDebugger) {
 			this.sendErrorResponse(response, 100, `Failed to start MI Debugger: pid or remoteDebugger is mandatory`);
 			return;
 		}
@@ -240,23 +240,10 @@ export class GDBDebugSession extends DebugSession {
 
 	protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
 		try {
-			if (this.useVarObjects) {
-				let name = args.name;
-				if (args.variablesReference >= VAR_HANDLES_START) {
-					const parent = this.variableHandles.get(args.variablesReference) as VariableObject;
-					name = `${parent.name}.${name}`;
-				}
-
-				const res = await this.miDebugger.varAssign(name, args.value);
-				response.body = {
-					value: res.result("value")
-				};
-			} else {
-				await this.miDebugger.changeVariable(args.name, args.value);
-				response.body = {
-					value: args.value
-				};
-			}
+			await this.miDebugger.changeVariable(args.name, args.value);
+			response.body = {
+				value: args.value
+			};
 			this.sendResponse(response);
 		} catch (err) {
 			this.sendErrorResponse(response, 11, `Could not continue: ${err}`);

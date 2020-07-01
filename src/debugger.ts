@@ -1,6 +1,7 @@
 import { MINode } from "./parser.mi2";
 import { DebugProtocol } from "vscode-debugprotocol/lib/debugProtocol";
 import { removeLeadingZeroes } from "./parser.expression";
+import { SourceMap } from "./parser.c";
 
 export interface Breakpoint {
 	file?: string;
@@ -383,9 +384,13 @@ export interface IDebugger {
 	getStack(maxLevels: number, thread: number): Thenable<Stack[]>;
 	getStackVariables(thread: number, frame: number): Thenable<DebuggerVariable[]>;
 	evalExpression(name: string, thread: number, frame: number): Thenable<any>;
+	evalCobField(name: string, thread: number, frame: number): Promise<DebuggerVariable>;
 	isReady(): boolean;
-	changeVariable(name: string, rawValue: string): Thenable<any>;
+	changeVariable(name: string, rawValue: string): Promise<any>;
 	examineMemory(from: number, to: number): Thenable<any>;
+	getGcovFiles(): string[];
+	sendUserInput(command: string, threadId: number, frameLevel: number): Thenable<any>;
+	getSourceMap(): SourceMap;
 }
 
 export class VariableObject {
