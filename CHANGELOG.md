@@ -1,3 +1,6 @@
+## 1.31.23
+* Implement attaching to a running process [Issue #3](https://github.com/OlegKunitsyn/gnucobol-debug/issues/3) by Bruno Pacheco
+
 ## 0.31.22
 * Fix malformed linespec error [Issue #53](https://github.com/OlegKunitsyn/gnucobol-debug/issues/53) by Bruno Pacheco
 * Remove call of cob_display [Issue #54](https://github.com/OlegKunitsyn/gnucobol-debug/issues/54) by Bruno Pacheco
