@@ -348,6 +348,7 @@ export class DebuggerVariable {
 			for (const detail of this.details) {
 				result.push({
 					name: detail.name,
+					evaluateName: this.cobolName,
 					type: detail.type,
 					value: detail.value,
 					variablesReference: 0
@@ -357,7 +358,7 @@ export class DebuggerVariable {
 
 		result.push({
 			name: 'value',
-			type: this.displayableType,
+			evaluateName: this.cobolName,
 			value: this.value || "null",
 			variablesReference: 0
 		});

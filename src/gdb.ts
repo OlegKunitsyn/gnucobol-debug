@@ -404,6 +404,7 @@ export class GDBDebugSession extends DebugSession {
 					variables.push({
 						name: stackVariable.cobolName,
 						value: stackVariable.displayableType,
+						type: stackVariable.displayableType,
 						variablesReference: this.variableHandles.create(stackVariable.cobolName)
 					});
 				}
@@ -429,7 +430,9 @@ export class GDBDebugSession extends DebugSession {
 				for (const child of stackVariable.children.values()) {
 					variables.push({
 						name: child.cobolName,
+						evaluateName: child.cobolName,
 						value: child.displayableType,
+						type: child.displayableType,
 						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
 					});
 				}
@@ -490,7 +493,7 @@ export class GDBDebugSession extends DebugSession {
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
 		const [threadId, level] = this.frameIdToThreadAndLevel(args.frameId);
-		if (args.context == "watch" || args.context == "hover") {
+		if (args.context == "watch" || args.context == "variables" || args.context == "hover") {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
