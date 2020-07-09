@@ -31,7 +31,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private process: ChildProcess.ChildProcess;
 	private lastStepCommand: Function;
 	private hasCobGetFieldStringFunction: boolean = true;
-	private hasCobPutFieldStringFunction: boolean = false;
+	private hasCobPutFieldStringFunction: boolean = true;
 
 	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
