@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as nativePath from "path";
 import { SourceMap } from '../src/parser.c';
-import { parseExpression } from '../src/parser.expression';
+import { parseExpression, cleanRawValue } from '../src/functions';
 
-suite("WATCH expression parse", () => {
+suite("Useful functions", () => {
     const cwd = nativePath.resolve(__dirname, '../../test/resources');
     const c = nativePath.resolve(cwd, 'petstore.c');
     const parsed = new SourceMap(cwd, [c]);
@@ -89,6 +89,16 @@ suite("WATCH expression parse", () => {
     test("it works for -000000000000000000000001", () => {
         const [actual] = parseExpression("-000000000000000000000001", functionName, parsed);
         const expected = "-1";
+        assert.equal(actual, expected);
+    });
+    test("it removes initial and final quotes for \"tttt\"", () => {
+        const actual = cleanRawValue("\"tttt\"");
+        const expected = "tttt";
+        assert.equal(actual, expected);
+    });
+    test("it escapes internal quotes", () => {
+        const actual = cleanRawValue("\"tt\"tt\"");
+        const expected = "tt\\\\\"tt";
         assert.equal(actual, expected);
     });
 });

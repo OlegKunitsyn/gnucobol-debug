@@ -4,7 +4,7 @@ import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
 import { SourceMap } from "./parser.c";
-import { parseExpression } from "./parser.expression";
+import { parseExpression, cleanRawValue } from "./functions";
 
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
@@ -31,7 +31,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 	private process: ChildProcess.ChildProcess;
 	private lastStepCommand: Function;
 	private hasCobGetFieldStringFunction: boolean = true;
-	private hasCobPutFieldStringFunction: boolean = true;
+	private hasCobPutFieldStringFunction: boolean = false;
 
 	constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
 		super();
@@ -493,15 +493,22 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 		const functionName = await this.getCurrentFunctionName();
 
+		const cleanedRawValue = cleanRawValue(rawValue);
+
 		try {
 			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
-			if (this.hasCobPutFieldStringFunction) {
-				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\\"${rawValue}\\\")"`);
+
+			if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
+				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);
 			} else {
-				await this.sendCommand(`gdb-set var ${variable.cName}=\\\"${rawValue}\\\"`);
+				let cName = variable.cName;
+				if (variable.cName.startsWith("f_")) {
+					cName += ".data";
+				}
+				await this.sendCommand(`gdb-set var ${cName}=\"${cleanedRawValue}\"`);
 			}
 		} catch (e) {
-			if (e.message.includes("cob_put_field_str")) {
+			if (e.message.includes("No symbol \"cob_put_field_str\"")) {
 				this.hasCobPutFieldStringFunction = false;
 				return this.changeVariable(name, rawValue);
 			}
@@ -795,7 +802,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				value = null;
 			}
 		} catch (error) {
-			if (error.message.includes("cob_get_field_str_buffered")) {
+			if (error.message.includes("No symbol \"cob_get_field_str_buffered\"")) {
 				this.hasCobGetFieldStringFunction = false;
 				return this.evalVariable(variable, thread, frame);
 			}
