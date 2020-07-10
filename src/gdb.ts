@@ -75,6 +75,7 @@ export class GDBDebugSession extends DebugSession {
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 		this.showVariableDetails = this.settings.displayVariableAttributes;
+		response.body.supportsSetVariable = true;
 		this.sendResponse(response);
 	}
 
@@ -240,10 +241,19 @@ export class GDBDebugSession extends DebugSession {
 
 	protected async setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): Promise<void> {
 		try {
-			await this.miDebugger.changeVariable(args.name, args.value);
-			response.body = {
-				value: args.value
-			};
+			let id: number | string | VariableObject | ExtendedVariable;
+			if (args.variablesReference < VAR_HANDLES_START) {
+				id = args.variablesReference - STACK_HANDLES_START;
+			} else {
+				id = this.variableHandles.get(args.variablesReference);
+			}
+
+			if (typeof id == "string") {
+				await this.miDebugger.changeVariable(id, args.value);
+				response.body = {
+					value: args.value
+				};
+			}
 			this.sendResponse(response);
 		} catch (err) {
 			this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
@@ -404,6 +414,7 @@ export class GDBDebugSession extends DebugSession {
 					variables.push({
 						name: stackVariable.cobolName,
 						value: stackVariable.displayableType,
+						type: stackVariable.displayableType,
 						variablesReference: this.variableHandles.create(stackVariable.cobolName)
 					});
 				}
@@ -429,7 +440,9 @@ export class GDBDebugSession extends DebugSession {
 				for (const child of stackVariable.children.values()) {
 					variables.push({
 						name: child.cobolName,
+						evaluateName: child.cobolName,
 						value: child.displayableType,
+						type: child.displayableType,
 						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
 					});
 				}
@@ -490,7 +503,7 @@ export class GDBDebugSession extends DebugSession {
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
 		const [threadId, level] = this.frameIdToThreadAndLevel(args.frameId);
-		if (args.context == "watch" || args.context == "hover") {
+		if (args.context == "watch" || args.context == "variables" || args.context == "hover") {
 			this.miDebugger.evalExpression(args.expression, threadId, level).then((res) => {
 				response.body = {
 					variablesReference: 0,
