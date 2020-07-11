@@ -1,3 +1,7 @@
+## 1.31.24
+* Implement attaching to a remote gdbserver [Issue #3](https://github.com/OlegKunitsyn/gnucobol-debug/issues/3) by Bruno Pacheco
+* Implement support of USAGE [Issue #59](https://github.com/OlegKunitsyn/gnucobol-debug/issues/59) by Bruno Pacheco
+
 ## 1.31.23
 * Implement attaching to a running process [Issue #3](https://github.com/OlegKunitsyn/gnucobol-debug/issues/3) by Bruno Pacheco
 
