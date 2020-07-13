@@ -121,15 +121,15 @@ const containsQuotes = /"/g;
 export function cleanRawValue(rawValue: string): string {
     let cleanedRawValue = rawValue;
 
-    if(!!cleanedRawValue && cleanedRawValue.startsWith("\"")) {
+    if (!!cleanedRawValue && cleanedRawValue.startsWith("\"")) {
         cleanedRawValue = cleanedRawValue.substring(1);
     }
 
-    if(!!cleanedRawValue && cleanedRawValue.endsWith("\"")) {
+    if (!!cleanedRawValue && cleanedRawValue.endsWith("\"")) {
         cleanedRawValue = cleanedRawValue.substring(0, cleanedRawValue.length - 1);
     }
 
-    if(containsQuotes.test(cleanedRawValue)) {
+    if (containsQuotes.test(cleanedRawValue)) {
         cleanedRawValue = cleanedRawValue.replace(containsQuotes, '\\\\\"');
     }
 

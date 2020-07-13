@@ -74,7 +74,7 @@ suite("C code parse", () => {
 			assert.notEqual(variable.attribute.flags, undefined);
 		}
 
-		const variable = parsed.getVariableByCobol('datatypes_.numeric-data.dispp');
+		const variable = parsed.getVariableByCobol('datatypes_.NUMERIC-DATA.DISPP');
 		assert.equal('numeric', variable.attribute.type);
 		assert.equal(8, variable.attribute.digits);
 		assert.equal(8, variable.attribute.scale);
@@ -92,13 +92,13 @@ suite("C code parse", () => {
 		const f_23 = parsed.getVariableByC('mlp_.f_23');
 		assert.equal('argA', f_23.cobolName);
 
-		const argAFunc = parsed.getVariableByCobol('func_.argA');
+		const argAFunc = parsed.getVariableByCobol('func_.ARGA');
 		assert.equal('f_6', argAFunc.cName);
 
-		const dividendDvd = parsed.getVariableByCobol('dvd_.dividend');
+		const dividendDvd = parsed.getVariableByCobol('dvd_.DIVIDEND');
 		assert.equal('f_14', dividendDvd.cName);
 
-		const argAMlp = parsed.getVariableByCobol('mlp_.argA');
+		const argAMlp = parsed.getVariableByCobol('mlp_.ARGA');
 		assert.equal('f_23', argAMlp.cName);
 	});
 });
