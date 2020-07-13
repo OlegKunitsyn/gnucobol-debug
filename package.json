@@ -40,32 +40,22 @@
 				"title": "GnuCOBOL Docker: stop"
 			}
 		],
-		"breakpoints": [
-			{
-				"language": "cobol"
-			},
-			{
-				"language": "COBOL"
-			},
-			{
-				"language": "ACUCOBOL"
-			},
-			{
-				"language": "OpenCOBOL"
-			},
-			{
-				"language": "GnuCOBOL"
-			},
-			{
-				"language": "entcobol"
-			}
-		],
 		"debuggers": [
 			{
 				"type": "gdb",
+				"label": "COBOL debugger",
+				"enableBreakpointsFor": {
+					"languageIds": [
+						"cobol",
+						"COBOL",
+						"ACUCOBOL",
+						"OpenCOBOL",
+						"GnuCOBOL",
+						"entcobol"
+					]
+				},
 				"program": "./out/src/gdb.js",
 				"runtime": "node",
-				"label": "COBOL debugger",
 				"configurationAttributes": {
 					"launch": {
 						"required": [
