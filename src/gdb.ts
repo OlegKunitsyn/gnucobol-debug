@@ -248,8 +248,15 @@ export class GDBDebugSession extends DebugSession {
 				id = this.variableHandles.get(args.variablesReference);
 			}
 
+			let name = args.name;
 			if (typeof id == "string") {
-				await this.miDebugger.changeVariable(id, args.value);
+				name = `${id}.${args.name}`;
+				if (this.showVariableDetails && args.name === "value") {
+					name = id;
+				}
+			}
+			if (!this.showVariableDetails || args.name === "value") {
+				await this.miDebugger.changeVariable(name, args.value);
 				response.body = {
 					value: args.value
 				};
@@ -411,11 +418,22 @@ export class GDBDebugSession extends DebugSession {
 				const [threadId, level] = this.frameIdToThreadAndLevel(id);
 				const stackVariables = await this.miDebugger.getStackVariables(threadId, level);
 				for (const stackVariable of stackVariables) {
+					let reference = 0;
+					if (this.showVariableDetails || !!stackVariable.children.size) {
+						reference = this.variableHandles.create(stackVariable.cobolName);
+					}
+
+					let value = stackVariable.value || "null";
+					if (this.showVariableDetails) {
+						value = stackVariable.displayableType;
+					}
+
 					variables.push({
 						name: stackVariable.cobolName,
-						value: stackVariable.displayableType,
+						evaluateName: stackVariable.cobolName,
+						value: value,
 						type: stackVariable.displayableType,
-						variablesReference: this.variableHandles.create(stackVariable.cobolName)
+						variablesReference: reference
 					});
 				}
 
@@ -433,17 +451,29 @@ export class GDBDebugSession extends DebugSession {
 
 				let variables: DebugProtocol.Variable[] = [];
 
-				if (stackVariable.children.size == 0) {
+				if (this.showVariableDetails) {
 					variables = stackVariable.toDebugProtocolVariable(this.showVariableDetails);
 				}
 
 				for (const child of stackVariable.children.values()) {
+					let childId = `${id}.${child.cobolName}`;
+					let reference = 0;
+					if (this.showVariableDetails || !!child.children.size) {
+						reference = this.variableHandles.create(childId);
+					}
+
+					let value = child.displayableType;
+					if (!this.showVariableDetails) {
+						const evaluatedChild = await this.miDebugger.evalCobField(childId, 0, 0);
+						value = evaluatedChild.value || "null";
+					}
+
 					variables.push({
 						name: child.cobolName,
 						evaluateName: child.cobolName,
-						value: child.displayableType,
+						value: value,
 						type: child.displayableType,
-						variablesReference: this.variableHandles.create(`${id}.${child.cobolName}`)
+						variablesReference: reference
 					});
 				}
 				response.body = {
