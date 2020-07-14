@@ -96,23 +96,13 @@ export class SourceMap {
 				const dataStorage = this.dataStorages.get(`${functionName}.${match[3]}`);
 				const field = new DebuggerVariable(match[5], match[1], functionName, attribute, parseInt(match[2]));
 
-				if (dataStorage && dataStorage.cobolName === field.cobolName) {
-					this.variablesByC.delete(`${functionName}.${dataStorage.cName}`);
+				this.variablesByC.set(`${functionName}.${field.cName}`, field);
 
-					dataStorage.cName = field.cName;
-					dataStorage.attribute = field.attribute;
-					dataStorage.size = field.size;
-
-					this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
+				if (dataStorage) {
+					dataStorage.addChild(field);
+					this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}.${field.cobolName}`, field);
 				} else {
-					this.variablesByC.set(`${functionName}.${field.cName}`, field);
-
-					if (dataStorage) {
-						dataStorage.addChild(field);
-						this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}.${field.cobolName}`, field);
-					} else {
-						this.variablesByCobol.set(`${functionName}.${field.cobolName}`, field);
-					}
+					this.variablesByCobol.set(`${functionName}.${field.cobolName}`, field);
 				}
 			}
 			match = fileIncludeRegex.exec(line);
