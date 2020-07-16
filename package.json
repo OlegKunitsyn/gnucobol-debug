@@ -266,7 +266,7 @@
 			"properties": {
 				"Cobol_Debugger.display_variable_attributes": {
 					"type": "boolean",
-					"default": true,
+					"default": false,
 					"description": "Displaying Data Storages and Fields attributes(e.g. size of Alphanumerics or digits and scale of numerics).",
 					"scope": "resource"
 				}
