@@ -88,7 +88,7 @@ export class SourceMap {
 				const dataStorage = new DebuggerVariable(match[4], match[2], functionName, new Attribute(null, VariableType[match[1]], 0, 0), size);
 				this.dataStorages.set(`${functionName}.${dataStorage.cName}`, dataStorage);
 				this.variablesByC.set(`${functionName}.${dataStorage.cName}`, dataStorage);
-				this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}`, dataStorage);
+				this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName.toUpperCase()}`, dataStorage);
 			}
 			match = fieldRegex.exec(line);
 			if (match) {
@@ -100,9 +100,9 @@ export class SourceMap {
 
 				if (dataStorage) {
 					dataStorage.addChild(field);
-					this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName}.${field.cobolName}`, field);
+					this.variablesByCobol.set(`${functionName}.${dataStorage.cobolName.toUpperCase()}.${field.cobolName.toUpperCase()}`, field);
 				} else {
-					this.variablesByCobol.set(`${functionName}.${field.cobolName}`, field);
+					this.variablesByCobol.set(`${functionName}.${field.cobolName.toUpperCase()}`, field);
 				}
 			}
 			match = fileIncludeRegex.exec(line);
@@ -138,7 +138,7 @@ export class SourceMap {
 
 	public findVariableByCobol(functionName: string, name: string): DebuggerVariable {
 		for (const key of this.variablesByCobol.keys()) {
-			if (key.startsWith(functionName) && key.endsWith(`.${name}`)) {
+			if (key.startsWith(functionName) && key.endsWith(`.${name.toUpperCase()}`)) {
 				return this.variablesByCobol.get(key);
 			}
 		}
