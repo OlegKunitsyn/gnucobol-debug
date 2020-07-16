@@ -3,6 +3,7 @@ import * as ChildProcess from "child_process";
 import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
+import * as fs from "fs";
 import { SourceMap } from "./parser.c";
 import { parseExpression, cleanRawValue } from "./functions";
 
@@ -61,6 +62,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
+			if (!fs.existsSync(cwd)) {
+				reject(new Error("cwd does not exist."));
+			}
+
 			if (!!this.noDebug) {
 				const args = this.cobcArgs
 					.concat([target])
@@ -142,6 +147,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
+			if (!fs.existsSync(cwd)) {
+				reject(new Error("cwd does not exist."));
+			}
+
 			const args = this.cobcArgs.concat([
 				'-g',
 				'-fsource-location',
