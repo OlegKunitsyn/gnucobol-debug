@@ -709,7 +709,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 		const functionName = await this.getCurrentFunctionName();
 
-		const variablesResponse = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --simple-values`);
+		const variablesResponse = await this.sendCommand(`stack-list-variables --thread ${thread} --frame ${frame} --all-values`);
 		const variables = variablesResponse.result("variables");
 
 		const currentFrameVariables = new Set<DebuggerVariable>();
@@ -717,20 +717,21 @@ export class MI2 extends EventEmitter implements IDebugger {
 			const key = MINode.valueOf(element, "name");
 			const value = MINode.valueOf(element, "value");
 
-			const cobolVariable = this.map.getVariableByC(`${functionName}.${key}`);
+			if (key.startsWith("b_")) {
+				const cobolVariable = this.map.getVariableByC(`${functionName}.${key}`);
 
-			if (cobolVariable) {
-				try {
-					cobolVariable.setValue(value);
-				} catch (e) {
-					this.log("stderr", `Failed to set value on ${functionName}.${key}`);
-					this.log("stderr", e.message);
-					throw e;
+				if (cobolVariable) {
+					try {
+						cobolVariable.setValue(value);
+					} catch (e) {
+						this.log("stderr", `Failed to set value on ${functionName}.${key}`);
+						this.log("stderr", e.message);
+						throw e;
+					}
+					currentFrameVariables.add(cobolVariable);
 				}
-				currentFrameVariables.add(cobolVariable.getDataStorage());
 			}
 		}
-
 		return Array.from(currentFrameVariables);
 	}
 
