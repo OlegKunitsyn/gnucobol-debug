@@ -65,6 +65,32 @@ export class NumericValueParser {
 
 	private static ZERO_SIGN_CHAR_CODE = 112;
 
+	public static format(valueStr: string, fieldSize: number, signed: boolean): string {
+		let value = valueStr;
+
+		if (signed) {
+			if (/^[+\-].+$/.test(value)) {
+				value = value.substring(1, value.length);
+			}
+			let suffix = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
+			value = value.substring(0, value.length - 1) + suffix;
+		}
+
+		value = value.replace(/\./, "");
+		let diff = fieldSize - value.length;
+		if (diff > 0) {
+			let prefix = "";
+			for (let i = 0; i < diff; i++) {
+				prefix += "0";
+			}
+			value = prefix + value;
+		} else if (diff < 0) {
+			value = value.substring(diff, value.length);
+		}
+
+		return value;
+	}
+
 	public static parse(valueStr: string, fieldSize: number, scale: number): string {
 		let value = valueStr;
 		if (value.startsWith('"')) {
@@ -103,6 +129,26 @@ export class NumericValueParser {
 }
 
 export class AlphanumericValueParser {
+
+	public static format(valueStr: string, fieldSize: number): string {
+		let value = valueStr;
+		if (value.startsWith('"')) {
+			value = value.substring(1);
+		}
+		if (value.endsWith('"')) {
+			value = value.substring(0, value.length - 1);
+		}
+
+		let diff = fieldSize - value.length;
+		if (diff > 0) {
+			let suffix = "";
+			for (let i = 0; i < diff; i++) {
+				suffix += " ";
+			}
+			value += suffix;
+		}
+		return `"${value}"`;
+	}
 
 	public static parse(valueStr: string, fieldSize: number): string {
 		let value = valueStr;
@@ -244,6 +290,24 @@ export class Attribute {
 		return [type, details];
 	}
 
+	public format(valueStr: string, fieldSize: number): string {
+		if (!valueStr) {
+			return null;
+		}
+		switch (this.type) {
+			case 'numeric':
+				return NumericValueParser.format(valueStr, fieldSize, this.has(CobFlag.HAVE_SIGN));
+			case 'numeric edited':
+			case 'alphanumeric':
+			case 'alphanumeric edited':
+			case 'national':
+			case 'national edited':
+				return AlphanumericValueParser.format(valueStr, fieldSize);
+			default:
+				return valueStr;
+		}
+	}
+
 	public parse(valueStr: string, fieldSize: number): string {
 		if (!valueStr) {
 			return null;
@@ -335,6 +399,10 @@ export class DebuggerVariable {
 
 	public setValue(value: string): void {
 		this.value = this.attribute.parse(value, this.size);
+	}
+
+	public formatValue(value: string): string {
+		return this.attribute.format(value, this.size);
 	}
 
 	public setValueUsage(value: string): void {
