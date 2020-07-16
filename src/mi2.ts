@@ -3,6 +3,7 @@ import * as ChildProcess from "child_process";
 import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
 import * as nativePath from "path";
+import * as fs from "fs";
 import { SourceMap } from "./parser.c";
 import { parseExpression, cleanRawValue } from "./functions";
 
@@ -61,6 +62,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
+			if (!fs.existsSync(cwd)) {
+				reject(new Error("cwd does not exist."));
+			}
+
 			if (!!this.noDebug) {
 				const args = this.cobcArgs
 					.concat([target])
@@ -142,6 +147,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
+			if (!fs.existsSync(cwd)) {
+				reject(new Error("cwd does not exist."));
+			}
+
 			const args = this.cobcArgs.concat([
 				'-g',
 				'-fsource-location',
@@ -496,7 +505,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		const cleanedRawValue = cleanRawValue(rawValue);
 
 		try {
-			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
+			const variable = this.map.getVariableByCobol(`${functionName}.${name.toUpperCase()}`);
 
 			if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
 				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);
@@ -741,22 +750,26 @@ export class MI2 extends EventEmitter implements IDebugger {
 		if (this.verbose)
 			this.log("stderr", "evalExpression");
 
-		try {
-			let [finalExpression, variableNames] = parseExpression(expression, functionName, this.map);
+		let [finalExpression, variableNames] = parseExpression(expression, functionName, this.map);
 
-			for (let variableName of variableNames) {
-				const variable = this.map.getVariableByC(`${functionName}.${variableName}`);
-				if (variable) {
-					await this.evalVariable(variable, thread, frame);
-					const value = variable.value;
-					finalExpression = `const ${variableName}=${value};` + finalExpression;
-				}
+		for (let variableName of variableNames) {
+			const variable = this.map.getVariableByC(`${functionName}.${variableName}`);
+			if (variable) {
+				await this.evalVariable(variable, thread, frame);
+				const value = variable.value;
+				finalExpression = `const ${variableName}=${value};` + finalExpression;
 			}
-			return eval(finalExpression);
+		}
+
+		try {
+			let result = `${eval(finalExpression)}`;
+			if (/[^0-9.\-+]/g.test(result)) {
+				return `"${result}"`;
+			}
+			return result;
 		} catch (e) {
-			this.log("stderr", `Failed to evaluate ${expression}`);
 			this.log("stderr", e.message);
-			throw e;
+			return `Failed to evaluate ${expression}`;
 		}
 	}
 
@@ -767,7 +780,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			this.log("stderr", "evalCobField");
 
 		try {
-			const variable = this.map.getVariableByCobol(`${functionName}.${name}`);
+			const variable = this.map.getVariableByCobol(`${functionName}.${name.toUpperCase()}`);
 			return await this.evalVariable(variable, thread, frame);
 		} catch (e) {
 			this.log("stderr", `Failed to eval cob field value on ${functionName}.${name}`);
