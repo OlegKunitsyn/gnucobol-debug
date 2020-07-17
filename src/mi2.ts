@@ -510,12 +510,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 
 			if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
 				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);
-			} else if (variable.cName.startsWith("f_")) {
-				const formatedValue = variable.formatValue(cleanedRawValue);
-				await this.sendCommand(`gdb-set var ${variable.cName}.data=\"${formatedValue}\"`);
 			} else {
-				const truncatedValue = cleanedRawValue.substring(0, variable.size);
-				await this.sendCommand(`gdb-set var {char [${variable.size + 1}]}${variable.cName}=\"${truncatedValue}\"`);
+				let finalValue = variable.formatValue(cleanedRawValue);
+				let cName = variable.cName;
+				if (variable.cName.startsWith("f_")) {
+					cName += ".data";
+				}
+				await this.sendCommand(`data-evaluate-expression "(void)memcpy(${cName}, \\"${finalValue}\\", ${variable.size})"`);
 			}
 		} catch (e) {
 			if (e.message.includes("No symbol \"cob_put_field_str\"")) {
