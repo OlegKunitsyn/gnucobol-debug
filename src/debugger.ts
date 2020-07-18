@@ -65,27 +65,47 @@ export class NumericValueParser {
 
 	private static ZERO_SIGN_CHAR_CODE = 112;
 
-	public static format(valueStr: string, fieldSize: number, signed: boolean): string {
+	public static format(valueStr: string, fieldSize: number, scale: number, signed: boolean): string {
 		let value = valueStr;
 
-		if (signed) {
-			if (/^[+\-].+$/.test(value)) {
-				value = value.substring(1, value.length);
-			}
-			let suffix = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
-			value = value.substring(0, value.length - 1) + suffix;
+		let isNegative = false;
+		if (/^[-].+$/.test(value)) {
+			value = value.substring(1, value.length);
+			isNegative = true;
 		}
 
-		value = value.replace(/\./, "");
-		let diff = fieldSize - value.length;
-		if (diff > 0) {
+		let [wholeNumber, decimals] = value.split(/\./);
+		if(!value.includes(".")) {
+			decimals = "";
+		}
+
+		let diffDigits = fieldSize - wholeNumber.length - scale;
+		if (diffDigits > 0) {
 			let prefix = "";
-			for (let i = 0; i < diff; i++) {
+			for (let i = 0; i < diffDigits; i++) {
 				prefix += "0";
 			}
-			value = prefix + value;
-		} else if (diff < 0) {
-			value = value.substring(diff, value.length);
+			wholeNumber = prefix + wholeNumber;
+		} else if (diffDigits < 0) {
+			wholeNumber = wholeNumber.substring(-diffDigits, wholeNumber.length);
+		}
+
+		let diffScale = scale - decimals.length;
+		if (diffScale > 0) {
+			let suffix = "";
+			for (let i = 0; i < diffScale; i++) {
+				suffix += "0";
+			}
+			decimals += suffix;
+		} else if (diffScale < 0) {
+			decimals = decimals.substring(0, decimals.length - Math.abs(diffScale));
+		}
+
+		value = wholeNumber + decimals;
+
+		if (signed && isNegative) {
+			let suffix = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
+			value = value.substring(0, value.length - 1) + suffix;
 		}
 
 		return value;
@@ -296,7 +316,7 @@ export class Attribute {
 		}
 		switch (this.type) {
 			case 'numeric':
-				return NumericValueParser.format(valueStr, fieldSize, this.has(CobFlag.HAVE_SIGN));
+				return NumericValueParser.format(valueStr, fieldSize, this.scale, this.has(CobFlag.HAVE_SIGN));
 			case 'numeric edited':
 			case 'alphanumeric':
 			case 'alphanumeric edited':
