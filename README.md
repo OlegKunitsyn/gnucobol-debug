@@ -20,7 +20,7 @@ An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplac
 ### Features
 * Setting breakpoints
 * Continue, Stop, Restart, Step Over, Step Into, Step Out
-* Variables pane, icluding Copy Value, Copy as Expression and Add to Watch
+* Variables pane, including Copy Value, Copy as Expression and Add to Watch
 * Watch pane with expressions
 * Code coverage
 * No mainframe required
