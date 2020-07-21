@@ -69,43 +69,49 @@ export class NumericValueParser {
 		let value = valueStr;
 
 		let isNegative = false;
-		if (/^[-].+$/.test(value)) {
+		if (/^[-\+].+$/.test(value)) {
+			isNegative = value.startsWith("-");
 			value = value.substring(1, value.length);
-			isNegative = true;
 		}
 
 		let [wholeNumber, decimals] = value.split(/\./);
-		if(!value.includes(".")) {
+		if (!value.includes(".")) {
 			decimals = "";
 		}
 
-		let diffDigits = fieldSize - wholeNumber.length - scale;
-		if (diffDigits > 0) {
-			let prefix = "";
-			for (let i = 0; i < diffDigits; i++) {
-				prefix += "0";
-			}
-			wholeNumber = prefix + wholeNumber;
-		} else if (diffDigits < 0) {
-			wholeNumber = wholeNumber.substring(-diffDigits, wholeNumber.length);
-		}
-
-		let diffScale = scale - decimals.length;
-		if (diffScale > 0) {
-			let suffix = "";
-			for (let i = 0; i < diffScale; i++) {
-				suffix += "0";
-			}
-			decimals += suffix;
-		} else if (diffScale < 0) {
-			decimals = decimals.substring(0, decimals.length - Math.abs(diffScale));
+		if (scale < 0) {
+			decimals = "";
+			wholeNumber = wholeNumber.substring(0, Math.max(0, wholeNumber.length - Math.abs(scale)));
+		} else if (scale > fieldSize) {
+			wholeNumber = "";
+			decimals = decimals.substring(Math.min(decimals.length, scale - fieldSize), decimals.length);
 		}
 
 		value = wholeNumber + decimals;
 
+		let diff = fieldSize - value.length;
+		if (diff > 0) {
+			let append = "";
+			for (let i = 0; i < diff; i++) {
+				append += "0";
+			}
+
+			if (fieldSize - scale < 0) {
+				value += append;
+			} else {
+				value = append + value;
+			}
+		} else if (diff < 0) {
+			if (fieldSize - scale < 0) {
+				value = value.substring(0, value.length - Math.abs(diff));
+			} else {
+				value = value.substring(Math.abs(diff), value.length);
+			}
+		}
+
 		if (signed && isNegative) {
-			let suffix = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
-			value = value.substring(0, value.length - 1) + suffix;
+			let sign = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
+			value = value.substring(0, value.length - 1) + sign;
 		}
 
 		return value;
