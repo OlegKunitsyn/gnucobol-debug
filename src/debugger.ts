@@ -172,8 +172,10 @@ export class AlphanumericValueParser {
 				suffix += " ";
 			}
 			value += suffix;
+		} else {
+			value = value.substring(0, value.length + diff);
 		}
-		return `"${value}"`;
+		return value;
 	}
 
 	public static parse(valueStr: string, fieldSize: number): string {
@@ -323,6 +325,7 @@ export class Attribute {
 		switch (this.type) {
 			case 'numeric':
 				return NumericValueParser.format(valueStr, fieldSize, this.scale, this.has(CobFlag.HAVE_SIGN));
+			case 'group':
 			case 'numeric edited':
 			case 'alphanumeric':
 			case 'alphanumeric edited':
@@ -330,7 +333,7 @@ export class Attribute {
 			case 'national edited':
 				return AlphanumericValueParser.format(valueStr, fieldSize);
 			default:
-				return valueStr;
+				throw new Error(`Not supported type: ${this.type}`);
 		}
 	}
 
@@ -353,8 +356,10 @@ export class Attribute {
 			case 'national':
 			case 'national edited':
 				return AlphanumericValueParser.parse(valueStr, fieldSize);
-			default:
+			case 'group':
 				return valueStr;
+			default:
+				throw new Error(`Not supported type: ${this.type}`);
 		}
 	}
 

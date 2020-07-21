@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { NumericValueParser } from '../src/debugger';
+import { NumericValueParser, AlphanumericValueParser } from '../src/debugger';
 
 suite("Variable Value Parser", () => {
     
@@ -63,13 +63,18 @@ suite("Variable Value Parser", () => {
         assert.equal(actual, "100p");
     });
 
-    test("it can parse 100p into -10000", () => {
+    test("it can parse 000q into -10000", () => {
         const actual = NumericValueParser.parse('"000q"', 4, -4);
         assert.equal(actual, "-10000");
     });
 
-    test("it can format -10000 into 100p", () => {
+    test("it can format -10000 into 000q", () => {
         const actual = NumericValueParser.format("-10000", 4, -4, true);
         assert.equal(actual, "000q");
+    });
+
+    test("it can format \\\"2234u12340123p1230123t12349999\\\" into \"2234u12340123p1230123t1234\"", () => {
+        const actual = AlphanumericValueParser.format("\"2234u12340123p1230123t12349999\"", 26);
+        assert.equal(actual, "2234u12340123p1230123t1234");
     });
 });
