@@ -1,3 +1,9 @@
+## 1.31.25
+* Fix failed tests [Issue #71](https://github.com/OlegKunitsyn/gnucobol-debug/issues/71)
+* Fix WATCH [Issue #62](https://github.com/OlegKunitsyn/gnucobol-debug/issues/62)
+* Fix validating cwd before launching the debugger [Issue #67](https://github.com/OlegKunitsyn/gnucobol-debug/issues/67)
+* Support for setting values on variables (GC 3.1 only) [Issue #40](https://github.com/OlegKunitsyn/gnucobol-debug/issues/40)
+
 ## 1.31.24
 * Implement attaching to a remote gdbserver [Issue #3](https://github.com/OlegKunitsyn/gnucobol-debug/issues/3) by Bruno Pacheco
 * Implement support of USAGE [Issue #59](https://github.com/OlegKunitsyn/gnucobol-debug/issues/59) by Bruno Pacheco
