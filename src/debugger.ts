@@ -356,6 +356,7 @@ export class Attribute {
 			case 'national':
 			case 'national edited':
 				return AlphanumericValueParser.parse(valueStr, fieldSize);
+			case 'integer':
 			case 'group':
 				return valueStr;
 			default:
@@ -387,7 +388,6 @@ export class Attribute {
 			case 'numeric fp bin64':
 			case 'numeric fp bin128':
 			case 'numeric comp5':
-			case 'integer':
 				return removeLeadingZeroes(valueStr.substring(1, valueStr.length - 1));
 			default:
 				return valueStr;
