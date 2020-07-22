@@ -208,6 +208,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 			target = nativePath.join(cwd, target);
 		const cmds = [
 			this.sendCommand("gdb-set target-async on", false),
+			this.sendCommand("gdb-set print repeats 1000", false),
 			this.sendCommand("gdb-set args " + targetargs.join(' '), false),
 			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
 			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
@@ -510,11 +511,12 @@ export class MI2 extends EventEmitter implements IDebugger {
 			if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
 				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);
 			} else {
+				let finalValue = variable.formatValue(cleanedRawValue);
 				let cName = variable.cName;
 				if (variable.cName.startsWith("f_")) {
 					cName += ".data";
 				}
-				await this.sendCommand(`gdb-set var ${cName}=\"${cleanedRawValue}\"`);
+				await this.sendCommand(`data-evaluate-expression "(void)memcpy(${cName}, \\"${finalValue}\\", ${variable.size})"`);
 			}
 		} catch (e) {
 			if (e.message.includes("No symbol \"cob_put_field_str\"")) {
