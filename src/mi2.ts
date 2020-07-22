@@ -508,7 +508,9 @@ export class MI2 extends EventEmitter implements IDebugger {
 		try {
 			const variable = this.map.getVariableByCobol(`${functionName}.${name.toUpperCase()}`);
 
-			if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
+			if(variable.attribute.type === "integer") {
+				await this.sendCommand(`gdb-set var ${variable.cName}=${cleanedRawValue}`);
+			} else if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
 				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);
 			} else {
 				let finalValue = variable.formatValue(cleanedRawValue);
