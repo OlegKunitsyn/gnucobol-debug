@@ -65,6 +65,58 @@ export class NumericValueParser {
 
 	private static ZERO_SIGN_CHAR_CODE = 112;
 
+	public static format(valueStr: string, fieldSize: number, scale: number, signed: boolean): string {
+		let value = valueStr;
+
+		let isNegative = false;
+		if (/^[-\+].+$/.test(value)) {
+			isNegative = value.startsWith("-");
+			value = value.substring(1, value.length);
+		}
+
+		let [wholeNumber, decimals] = value.split(/\./);
+		if (!value.includes(".")) {
+			decimals = "";
+		}
+
+		if (scale < 0) {
+			decimals = "";
+			wholeNumber = wholeNumber.substring(0, Math.max(0, wholeNumber.length - Math.abs(scale)));
+		} else if (scale > fieldSize) {
+			wholeNumber = "";
+			decimals = decimals.substring(Math.min(decimals.length, scale - fieldSize), decimals.length);
+		}
+
+		value = wholeNumber + decimals;
+
+		let diff = fieldSize - value.length;
+		if (diff > 0) {
+			let append = "";
+			for (let i = 0; i < diff; i++) {
+				append += "0";
+			}
+
+			if (fieldSize - scale < 0) {
+				value += append;
+			} else {
+				value = append + value;
+			}
+		} else if (diff < 0) {
+			if (fieldSize - scale < 0) {
+				value = value.substring(0, value.length - Math.abs(diff));
+			} else {
+				value = value.substring(Math.abs(diff), value.length);
+			}
+		}
+
+		if (signed && isNegative) {
+			let sign = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
+			value = value.substring(0, value.length - 1) + sign;
+		}
+
+		return value;
+	}
+
 	public static parse(valueStr: string, fieldSize: number, scale: number): string {
 		let value = valueStr;
 		if (value.startsWith('"')) {
@@ -103,6 +155,28 @@ export class NumericValueParser {
 }
 
 export class AlphanumericValueParser {
+
+	public static format(valueStr: string, fieldSize: number): string {
+		let value = valueStr;
+		if (value.startsWith('"')) {
+			value = value.substring(1);
+		}
+		if (value.endsWith('"')) {
+			value = value.substring(0, value.length - 1);
+		}
+
+		let diff = fieldSize - value.length;
+		if (diff > 0) {
+			let suffix = "";
+			for (let i = 0; i < diff; i++) {
+				suffix += " ";
+			}
+			value += suffix;
+		} else {
+			value = value.substring(0, value.length + diff);
+		}
+		return value;
+	}
 
 	public static parse(valueStr: string, fieldSize: number): string {
 		let value = valueStr;
@@ -244,6 +318,25 @@ export class Attribute {
 		return [type, details];
 	}
 
+	public format(valueStr: string, fieldSize: number): string {
+		if (!valueStr) {
+			return null;
+		}
+		switch (this.type) {
+			case 'numeric':
+				return NumericValueParser.format(valueStr, fieldSize, this.scale, this.has(CobFlag.HAVE_SIGN));
+			case 'group':
+			case 'numeric edited':
+			case 'alphanumeric':
+			case 'alphanumeric edited':
+			case 'national':
+			case 'national edited':
+				return AlphanumericValueParser.format(valueStr, fieldSize);
+			default:
+				throw new Error(`Not supported type: ${this.type}`);
+		}
+	}
+
 	public parse(valueStr: string, fieldSize: number): string {
 		if (!valueStr) {
 			return null;
@@ -263,8 +356,10 @@ export class Attribute {
 			case 'national':
 			case 'national edited':
 				return AlphanumericValueParser.parse(valueStr, fieldSize);
-			default:
+			case 'group':
 				return valueStr;
+			default:
+				throw new Error(`Not supported type: ${this.type}`);
 		}
 	}
 
@@ -335,6 +430,10 @@ export class DebuggerVariable {
 
 	public setValue(value: string): void {
 		this.value = this.attribute.parse(value, this.size);
+	}
+
+	public formatValue(value: string): string {
+		return this.attribute.format(value, this.size);
 	}
 
 	public setValueUsage(value: string): void {
