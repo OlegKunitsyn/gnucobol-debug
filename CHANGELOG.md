@@ -1,3 +1,6 @@
+## 1.31.26
+* Support for setting data storages and field values on GC 2.2 [Issue #40](https://github.com/OlegKunitsyn/gnucobol-debug/issues/40)
+
 ## 1.31.25
 * Fix failed tests [Issue #71](https://github.com/OlegKunitsyn/gnucobol-debug/issues/71)
 * Fix WATCH [Issue #62](https://github.com/OlegKunitsyn/gnucobol-debug/issues/62)
