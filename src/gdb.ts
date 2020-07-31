@@ -74,7 +74,6 @@ export class GDBDebugSession extends DebugSession {
 	private settings = new DebuggerSettings();
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
-		this.showVariableDetails = this.settings.displayVariableAttributes;
 		response.body.supportsSetVariable = true;
 		this.sendResponse(response);
 	}
