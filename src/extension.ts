@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { GDBDebugSession } from "./gdb";
 import { CoverageStatus } from './coverage';
+import { DebuggerSettings } from "./settings";
 
 const dockerTerminal = vscode.window.createTerminal("GnuCOBOL Docker");
 const dockerImage = 'olegkunitsyn/gnucobol:3.1-dev';
@@ -60,6 +61,28 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
             config.gdbpath = 'docker';
             config.cobcargs = ['exec', '-i', config.container, 'cobc'].concat(config.cobcargs);
             config.gdbargs = ['exec', '-i', config.container, 'gdb'].concat(config.gdbargs);
+        }
+        const settings = new DebuggerSettings();
+        if (config.cwd === undefined) {
+            config.cwd = settings.cwd;
+        }
+        if (config.target === undefined) {
+            config.target = settings.target;
+        }
+        if (config.group === undefined) {
+            config.group = [];
+        }
+        if (config.targetargs !== undefined && config.arguments === undefined) {
+            config.arguments = config.targetargs.join(" ");
+        }
+        if (config.arguments === undefined) {
+            config.arguments = "";
+        }
+        if (config.gdbpath === undefined) {
+            config.gdbpath = settings.gdbpath;
+        }
+        if (config.cobcpath === undefined) {
+            config.cobcpath = settings.cobcpath;
         }
         return config;
     }

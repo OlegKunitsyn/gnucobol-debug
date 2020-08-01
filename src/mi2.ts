@@ -56,7 +56,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		}
 	}
 
-	load(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any> {
+	load(cwd: string, target: string, targetargs: string, group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
@@ -70,7 +70,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				const args = this.cobcArgs
 					.concat([target])
 					.concat(group)
-					.concat(['-job=' + targetargs.join(' ')]);
+					.concat(['-job=' + targetargs]);
 				this.process = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
 				this.process.stderr.on("data", ((data) => { this.log("stderr", data); }).bind(this));
 				this.process.stdout.on("data", ((data) => { this.log("stdout", data); }).bind(this));
@@ -141,7 +141,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	attach(cwd: string, target: string, targetargs: string[], group: string[]): Thenable<any> {
+	attach(cwd: string, target: string, targetargs: string, group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
@@ -203,13 +203,13 @@ export class MI2 extends EventEmitter implements IDebugger {
 		});
 	}
 
-	protected initCommands(target: string, targetargs: string[], cwd: string) {
+	protected initCommands(target: string, targetargs: string, cwd: string) {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
 		const cmds = [
 			this.sendCommand("gdb-set target-async on", false),
 			this.sendCommand("gdb-set print repeats 1000", false),
-			this.sendCommand("gdb-set args " + targetargs.join(' '), false),
+			this.sendCommand("gdb-set args " + targetargs, false),
 			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
 			this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
 		];
@@ -508,7 +508,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 		try {
 			const variable = this.map.getVariableByCobol(`${functionName}.${name.toUpperCase()}`);
 
-			if(variable.attribute.type === "integer") {
+			if (variable.attribute.type === "integer") {
 				await this.sendCommand(`gdb-set var ${variable.cName}=${cleanedRawValue}`);
 			} else if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
 				await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);

@@ -51,14 +51,8 @@ When your `launch.json` config is set up, you can debug or execute your COBOL pr
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": ["subsample.cbl", "subsubsample.cbl"],
-            "coverage": false
+            "group": ["subsample.cbl", "subsubsample.cbl"]
         }
     ]
 }
@@ -82,13 +76,7 @@ Set `coverage` property to `true` in your `launch.json` and start debugging sess
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
             "coverage": true
         }
     ]
@@ -115,14 +103,7 @@ Here's an example:
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
-            "coverage": true,
             "container": "gnucobol"
         }
     ]
@@ -148,13 +129,7 @@ Here's an example:
             "name": "COBOL debugger attach",
             "type": "gdb",
             "request": "attach",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
             "pid": "${input:pid}"
         }
     ],
@@ -179,13 +154,7 @@ Here's an example:
             "name": "COBOL debugger attach",
             "type": "gdb",
             "request": "attach",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
             "remoteDebugger": "localhost:5555"
         }
     ]
@@ -208,14 +177,7 @@ Add `verbose` property to your `launch.json` and start debugging session. In `DE
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
-            "coverage": false,
             "verbose": true
         }
     ]
