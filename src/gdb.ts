@@ -74,7 +74,6 @@ export class GDBDebugSession extends DebugSession {
 	private settings = new DebuggerSettings();
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
-		this.showVariableDetails = this.settings.displayVariableAttributes;
 		response.body.supportsSetVariable = true;
 		this.sendResponse(response);
 	}
@@ -405,6 +404,8 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+		this.showVariableDetails = this.settings.displayVariableAttributes;
+		
 		let id: number | string | VariableObject | ExtendedVariable;
 		if (args.variablesReference < VAR_HANDLES_START) {
 			id = args.variablesReference - STACK_HANDLES_START;
