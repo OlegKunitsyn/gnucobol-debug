@@ -9,7 +9,7 @@
 		"debug",
 		"code coverage"
 	],
-	"version": "1.31.26",
+	"version": "2.31.27",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -19,8 +19,8 @@
 	"main": "./out/src/extension",
 	"activationEvents": [
 		"onDebugResolve",
-		"onCommand:gnucobol-debug.containerStart",
-		"onCommand:gnucobol-debug.containerStop"
+		"onCommand:gnucobol-debug.dockerStart",
+		"onCommand:gnucobol-debug.dockerStop"
 	],
 	"categories": [
 		"Debuggers"
@@ -32,11 +32,11 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "gnucobol-debug.containerStart",
+				"command": "gnucobol-debug.dockerStart",
 				"title": "GnuCOBOL Docker: start"
 			},
 			{
-				"command": "gnucobol-debug.containerStop",
+				"command": "gnucobol-debug.dockerStop",
 				"title": "GnuCOBOL Docker: stop"
 			}
 		],
@@ -68,24 +68,17 @@
 				"label": "COBOL debugger",
 				"configurationAttributes": {
 					"launch": {
-						"required": [
-							"target",
-							"gdbpath",
-							"cobcpath",
-							"targetargs",
-							"cwd",
-							"group"
-						],
+						"required": [],
 						"properties": {
 							"target": {
 								"type": "string",
 								"description": "Path to executable",
 								"default": "${file}"
 							},
-							"targetargs": {
-								"type": "array",
+							"arguments": {
+								"type": "string",
 								"description": "Extra arguments for executable",
-								"default": []
+								"default": null
 							},
 							"cwd": {
 								"type": "string",
@@ -97,10 +90,10 @@
 								"description": "Path to gdb",
 								"default": "gdb"
 							},
-							"container": {
+							"docker": {
 								"type": "string",
-								"description": "Docker container name",
-								"default": null
+								"description": "Docker image",
+								"default": "olegkunitsyn/gnucobol:3.1-dev"
 							},
 							"cobcpath": {
 								"type": "string",
@@ -138,24 +131,17 @@
 						}
 					},
 					"attach": {
-						"required": [
-							"target",
-							"gdbpath",
-							"cobcpath",
-							"targetargs",
-							"cwd",
-							"group"
-						],
+						"required": [],
 						"properties": {
 							"target": {
 								"type": "string",
 								"description": "Path to executable",
 								"default": "${file}"
 							},
-							"targetargs": {
-								"type": "array",
+							"arguments": {
+								"type": "string",
 								"description": "Extra arguments for executable",
-								"default": []
+								"default": null
 							},
 							"cwd": {
 								"type": "string",
@@ -213,48 +199,30 @@
 						"name": "COBOL debugger",
 						"type": "gdb",
 						"request": "launch",
-						"target": "${file}",
-						"targetargs": [],
-						"cwd": "${workspaceRoot}",
-						"gdbpath": "gdb",
-						"cobcpath": "cobc",
 						"cobcargs": [
 							"-free",
 							"-x"
 						],
-						"group": [],
 						"coverage": true
 					},
 					{
 						"name": "COBOL debugger attach local",
 						"type": "gdb",
 						"request": "attach",
-						"target": "${file}",
-						"targetargs": [],
-						"cwd": "${workspaceRoot}",
-						"gdbpath": "gdb",
-						"cobcpath": "cobc",
 						"cobcargs": [
 							"-free",
 							"-x"
 						],
-						"group": [],
 						"pid": "${input:pid}"
 					},
 					{
 						"name": "COBOL debugger attach remote",
 						"type": "gdb",
 						"request": "attach",
-						"target": "${file}",
-						"targetargs": [],
-						"cwd": "${workspaceRoot}",
-						"gdbpath": "gdb",
-						"cobcpath": "cobc",
 						"cobcargs": [
 							"-free",
 							"-x"
 						],
-						"group": [],
 						"remoteDebugger": "${input:remoteDebugger}"
 					}
 				]
@@ -269,6 +237,30 @@
 					"default": false,
 					"description": "Displaying Data Storages and Fields attributes(e.g. size of Alphanumerics or digits and scale of numerics).",
 					"scope": "resource"
+				},
+				"Cobol_Debugger.cwd": {
+					"type": "string",
+					"default": "${workspaceRoot}",
+					"description": "Path to project",
+					"scope": "application"
+				},
+				"Cobol_Debugger.target": {
+					"type": "string",
+					"description": "Path to source code",
+					"default": "${file}",
+					"scope": "application"
+				},
+				"Cobol_Debugger.gdbpath": {
+					"type": "string",
+					"description": "Path to gdb",
+					"default": "gdb",
+					"scope": "application"
+				},
+				"Cobol_Debugger.cobcpath": {
+					"type": "string",
+					"description": "Path to cobc",
+					"default": "cobc",
+					"scope": "application"
 				}
 			}
 		}

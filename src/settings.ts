@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 
 export class DebuggerSettings {
-    private readonly settings: vscode.WorkspaceConfiguration;
+    private readonly extensionSettings: vscode.WorkspaceConfiguration;
 
     constructor() {
-        this.settings = vscode.workspace.getConfiguration("Cobol_Debugger");
+        this.extensionSettings = vscode.workspace.getConfiguration("Cobol_Debugger");
     }
 
-    private getWithFallback<T>(section: string): T {
-        const info: any = this.settings.inspect<T>(section);
+    private getWithFallback<T>(settings: vscode.WorkspaceConfiguration, section: string): T {
+        const info: any = settings.inspect<T>(section);
         if (info.workspaceFolderValue !== undefined) {
             return info.workspaceFolderValue;
         } else if (info.workspaceValue !== undefined) {
@@ -20,6 +20,22 @@ export class DebuggerSettings {
     }
 
     public get displayVariableAttributes(): boolean {
-        return this.getWithFallback<boolean>("display_variable_attributes");
+        return this.getWithFallback<boolean>(this.extensionSettings, "display_variable_attributes");
+    }
+
+    public get cwd(): string {
+        return this.getWithFallback<string>(this.extensionSettings, "cwd");
+    }
+
+    public get target(): string {
+        return this.getWithFallback<string>(this.extensionSettings, "target");
+    }
+
+    public get gdbpath(): string {
+        return this.getWithFallback<string>(this.extensionSettings, "gdbpath");
+    }
+
+    public get cobcpath(): string {
+        return this.getWithFallback<string>(this.extensionSettings, "cobcpath");
     }
 }

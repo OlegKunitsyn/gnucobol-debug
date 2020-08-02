@@ -1,3 +1,10 @@
+## 2.31.27
+* Toggable details view [Issue #66](https://github.com/OlegKunitsyn/gnucobol-debug/issues/66) by Bruno Pacheco
+* Docker image selection [Issue #82](https://github.com/OlegKunitsyn/gnucobol-debug/issues/82)
+* Breaking changes in `launch.json`:
+  - `targetargs` property renamed to `arguments`, nullable by default
+  - `container` property renamed to `docker`, set to `olegkunitsyn/gnucobol:3.1-dev` by default
+
 ## 1.31.26
 * Support for setting data storages and field values on GC 2.2 [Issue #40](https://github.com/OlegKunitsyn/gnucobol-debug/issues/40)
 

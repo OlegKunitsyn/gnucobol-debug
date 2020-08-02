@@ -13,6 +13,7 @@
   <img src="https://vsmarketplacebadge.apphb.com/version/OlegKunitsyn.gnucobol-debug.svg?label=Debugger%20for%20GnuCOBOL" />
   <img src="https://vsmarketplacebadge.apphb.com/downloads-short/OlegKunitsyn.gnucobol-debug.svg?label=Downloads" />
   <img src="https://vsmarketplacebadge.apphb.com/installs-short/OlegKunitsyn.gnucobol-debug.svg?label=Installs" />
+  <img src="https://github.com/OlegKunitsyn/gnucobol-debug/workflows/Node.js%20CI/badge.svg" />
 </p>
 
 An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug) or [Open VSX-Registry](https://open-vsx.org/extension/OlegKunitsyn/gnucobol-debug).
@@ -51,14 +52,8 @@ When your `launch.json` config is set up, you can debug or execute your COBOL pr
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": ["subsample.cbl", "subsubsample.cbl"],
-            "coverage": false
+            "group": ["subsample.cbl", "subsubsample.cbl"]
         }
     ]
 }
@@ -82,13 +77,7 @@ Set `coverage` property to `true` in your `launch.json` and start debugging sess
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
             "coverage": true
         }
     ]
@@ -105,7 +94,7 @@ docker exec -i gnucobol cobc -V
 docker exec -i gnucobol gdb -v
 ```
 
-Add `container` property to your `launch.json` and start debugging session.
+Add `docker` property to your `launch.json` and start debugging session.
 Here's an example:
 ```json
 {
@@ -115,15 +104,8 @@ Here's an example:
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
-            "coverage": true,
-            "container": "gnucobol"
+            "docker": "olegkunitsyn/gnucobol:3.1-dev"
         }
     ]
 }
@@ -148,13 +130,7 @@ Here's an example:
             "name": "COBOL debugger attach",
             "type": "gdb",
             "request": "attach",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
             "pid": "${input:pid}"
         }
     ],
@@ -179,13 +155,7 @@ Here's an example:
             "name": "COBOL debugger attach",
             "type": "gdb",
             "request": "attach",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
             "remoteDebugger": "localhost:5555"
         }
     ]
@@ -208,14 +178,7 @@ Add `verbose` property to your `launch.json` and start debugging session. In `DE
             "name": "COBOL debugger",
             "type": "gdb",
             "request": "launch",
-            "target": "${file}",
-            "targetargs": [],
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "gdb",
-            "cobcpath": "cobc",
             "cobcargs": ["-free", "-x"],
-            "group": [],
-            "coverage": false,
             "verbose": true
         }
     ]
