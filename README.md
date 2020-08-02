@@ -93,7 +93,7 @@ docker exec -i gnucobol cobc -V
 docker exec -i gnucobol gdb -v
 ```
 
-Add `container` property to your `launch.json` and start debugging session.
+Add `docker` property to your `launch.json` and start debugging session.
 Here's an example:
 ```json
 {
@@ -104,7 +104,7 @@ Here's an example:
             "type": "gdb",
             "request": "launch",
             "cobcargs": ["-free", "-x"],
-            "container": "gnucobol"
+            "docker": "olegkunitsyn/gnucobol:3.1-dev"
         }
     ]
 }

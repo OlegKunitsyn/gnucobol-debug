@@ -55,12 +55,12 @@ export class CoverageStatus implements Disposable {
     this.statusBar.command = this.COMMAND;
   }
 
-  public show(gcovFiles: string[], sourceMap: SourceMap, container:string = undefined) {
-    if (container !== undefined) {
+  public show(gcovFiles: string[], sourceMap: SourceMap, docker:string = undefined) {
+    if (docker !== undefined) {
       for (let i = 0; i < gcovFiles.length; i++) {
         const localPath = nativePath.resolve(os.tmpdir(), nativePath.basename(gcovFiles[i]));
-        ChildProcess.spawnSync('docker', ['cp', `${container}:${gcovFiles[i]}.gcda`, `${localPath}.gcda`]);
-        ChildProcess.spawnSync('docker', ['cp', `${container}:${gcovFiles[i]}.gcno`, `${localPath}.gcno`]);
+        ChildProcess.spawnSync('docker', ['cp', `gnucobol:${gcovFiles[i]}.gcda`, `${localPath}.gcda`]);
+        ChildProcess.spawnSync('docker', ['cp', `gnucobol:${gcovFiles[i]}.gcno`, `${localPath}.gcno`]);
         gcovFiles[i] = localPath;
       }
     }

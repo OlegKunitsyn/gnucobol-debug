@@ -9,7 +9,7 @@
 		"debug",
 		"code coverage"
 	],
-	"version": "1.31.26",
+	"version": "2.31.27",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -19,8 +19,8 @@
 	"main": "./out/src/extension",
 	"activationEvents": [
 		"onDebugResolve",
-		"onCommand:gnucobol-debug.containerStart",
-		"onCommand:gnucobol-debug.containerStop"
+		"onCommand:gnucobol-debug.dockerStart",
+		"onCommand:gnucobol-debug.dockerStop"
 	],
 	"categories": [
 		"Debuggers"
@@ -32,11 +32,11 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "gnucobol-debug.containerStart",
+				"command": "gnucobol-debug.dockerStart",
 				"title": "GnuCOBOL Docker: start"
 			},
 			{
-				"command": "gnucobol-debug.containerStop",
+				"command": "gnucobol-debug.dockerStop",
 				"title": "GnuCOBOL Docker: stop"
 			}
 		],
@@ -75,11 +75,6 @@
 								"description": "Path to executable",
 								"default": "${file}"
 							},
-							"targetargs": {
-								"type": "array",
-								"description": "Extra arguments for executable (deprecated, use arguments instead)",
-								"default": []
-							},
 							"arguments": {
 								"type": "string",
 								"description": "Extra arguments for executable",
@@ -95,10 +90,10 @@
 								"description": "Path to gdb",
 								"default": "gdb"
 							},
-							"container": {
+							"docker": {
 								"type": "string",
-								"description": "Docker container name",
-								"default": null
+								"description": "Docker image",
+								"default": "olegkunitsyn/gnucobol:3.1-dev"
 							},
 							"cobcpath": {
 								"type": "string",
@@ -143,10 +138,10 @@
 								"description": "Path to executable",
 								"default": "${file}"
 							},
-							"targetargs": {
-								"type": "array",
+							"arguments": {
+								"type": "string",
 								"description": "Extra arguments for executable",
-								"default": []
+								"default": null
 							},
 							"cwd": {
 								"type": "string",

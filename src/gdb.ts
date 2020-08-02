@@ -30,7 +30,6 @@ class ExtendedVariable {
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	target: string;
-	targetargs: string[];
 	arguments: string;
 	gdbpath: string;
 	gdbargs: string[];
@@ -40,13 +39,12 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	group: string[];
 	verbose: boolean;
 	coverage: boolean;
-	container: string;
+	docker: string;
 }
 
 export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	target: string;
-	targetargs: string[];
 	arguments: string;
 	gdbpath: string;
 	gdbargs: string[];
@@ -71,7 +69,7 @@ export class GDBDebugSession extends DebugSession {
 	protected debugReady: boolean;
 	protected miDebugger: MI2;
 	coverageStatus: CoverageStatus;
-	private container: string;
+	private docker: string;
 	private showVariableDetails: boolean;
 	private settings = new DebuggerSettings();
 
@@ -84,7 +82,7 @@ export class GDBDebugSession extends DebugSession {
 		if (!args.coverage) {
 			this.coverageStatus = undefined;
 		}
-		this.container = args.container;
+		this.docker = args.docker;
 		this.started = false;
 		this.attached = false;
 
@@ -219,7 +217,7 @@ export class GDBDebugSession extends DebugSession {
 			return;
 
 		if (this.coverageStatus !== undefined) {
-			this.coverageStatus.show(this.miDebugger.getGcovFiles(), this.miDebugger.getSourceMap(), this.container);
+			this.coverageStatus.show(this.miDebugger.getGcovFiles(), this.miDebugger.getSourceMap(), this.docker);
 		}
 
 		this.quit = true;
