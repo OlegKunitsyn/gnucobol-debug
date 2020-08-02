@@ -13,6 +13,7 @@
   <img src="https://vsmarketplacebadge.apphb.com/version/OlegKunitsyn.gnucobol-debug.svg?label=Debugger%20for%20GnuCOBOL" />
   <img src="https://vsmarketplacebadge.apphb.com/downloads-short/OlegKunitsyn.gnucobol-debug.svg?label=Downloads" />
   <img src="https://vsmarketplacebadge.apphb.com/installs-short/OlegKunitsyn.gnucobol-debug.svg?label=Installs" />
+  <img src="https://github.com/OlegKunitsyn/gnucobol-debug/workflows/Node.js%20CI/badge.svg" />
 </p>
 
 An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug) or [Open VSX-Registry](https://open-vsx.org/extension/OlegKunitsyn/gnucobol-debug).
