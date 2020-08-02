@@ -31,6 +31,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	cwd: string;
 	target: string;
 	targetargs: string[];
+	arguments: string;
 	gdbpath: string;
 	gdbargs: string[];
 	cobcpath: string;
@@ -46,6 +47,7 @@ export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArgum
 	cwd: string;
 	target: string;
 	targetargs: string[];
+	arguments: string;
 	gdbpath: string;
 	gdbargs: string[];
 	cobcpath: string;
@@ -74,7 +76,6 @@ export class GDBDebugSession extends DebugSession {
 	private settings = new DebuggerSettings();
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
-		this.showVariableDetails = this.settings.displayVariableAttributes;
 		response.body.supportsSetVariable = true;
 		this.sendResponse(response);
 	}
@@ -106,7 +107,7 @@ export class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.load(args.cwd, args.target, args.targetargs, args.group).then(() => {
+		this.miDebugger.load(args.cwd, args.target, args.arguments, args.group).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);
@@ -152,7 +153,7 @@ export class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.attach(args.cwd, args.target, args.targetargs, args.group).then(() => {
+		this.miDebugger.attach(args.cwd, args.target, args.arguments, args.group).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);
@@ -405,6 +406,8 @@ export class GDBDebugSession extends DebugSession {
 	}
 
 	protected async variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): Promise<void> {
+		this.showVariableDetails = this.settings.displayVariableAttributes;
+		
 		let id: number | string | VariableObject | ExtendedVariable;
 		if (args.variablesReference < VAR_HANDLES_START) {
 			id = args.variablesReference - STACK_HANDLES_START;
