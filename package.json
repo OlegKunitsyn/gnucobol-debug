@@ -75,10 +75,10 @@
 								"description": "Path to executable",
 								"default": "${file}"
 							},
-							"arguments": {
+							"targetargs": {
 								"type": "string",
 								"description": "Extra arguments for executable",
-								"default": null
+								"default": ""
 							},
 							"cwd": {
 								"type": "string",
@@ -138,10 +138,10 @@
 								"description": "Path to executable",
 								"default": "${file}"
 							},
-							"arguments": {
+							"targetargs": {
 								"type": "string",
 								"description": "Extra arguments for executable",
-								"default": null
+								"default": ""
 							},
 							"cwd": {
 								"type": "string",

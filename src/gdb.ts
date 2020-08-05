@@ -30,7 +30,7 @@ class ExtendedVariable {
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	target: string;
-	arguments: string;
+	targetargs: string;
 	gdbpath: string;
 	gdbargs: string[];
 	cobcpath: string;
@@ -45,7 +45,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
 	target: string;
-	arguments: string;
+	targetargs: string;
 	gdbpath: string;
 	gdbargs: string[];
 	cobcpath: string;
@@ -105,7 +105,7 @@ export class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.load(args.cwd, args.target, args.arguments, args.group).then(() => {
+		this.miDebugger.load(args.cwd, args.target, args.targetargs, args.group).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);
@@ -151,7 +151,7 @@ export class GDBDebugSession extends DebugSession {
 		this.crashed = false;
 		this.debugReady = false;
 		this.useVarObjects = false;
-		this.miDebugger.attach(args.cwd, args.target, args.arguments, args.group).then(() => {
+		this.miDebugger.attach(args.cwd, args.target, args.targetargs, args.group).then(() => {
 			setTimeout(() => {
 				this.miDebugger.emit("ui-break-done");
 			}, 50);

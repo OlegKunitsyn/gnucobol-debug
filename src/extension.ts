@@ -71,8 +71,8 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
         if (config.group === undefined) {
             config.group = [];
         }
-        if (config.arguments === undefined) {
-            config.arguments = "";
+        if (config.targetargs === undefined) {
+            config.targetargs = "";
         }
         if (config.gdbpath === undefined) {
             config.gdbpath = settings.gdbpath;
