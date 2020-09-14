@@ -59,6 +59,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 	load(cwd: string, target: string, targetargs: string, group: string[]): Thenable<any> {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
+		if(this.cobcpath === "docker" && this.gdbpath === "docker" && process.platform === "win32")
+			target = target.replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/");
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
