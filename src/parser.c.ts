@@ -1,6 +1,26 @@
 import * as readline from "n-readlines";
-import * as nativePath from "path";
+import * as nativePathFromPath from "path";
+import { join } from "path";
 import { DebuggerVariable, Attribute, VariableType } from "./debugger";
+
+const nativePath = {
+	resolve: function(...args: string[]): string {
+		let nat = nativePathFromPath.resolve(...args);
+		if(process.platform === "win32") {
+			return nat.replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/");
+		}
+		return nat;
+	},
+	basename: function(path: string): string {
+		return nativePathFromPath.basename(path);
+	},
+	isAbsolute: function(path: string): boolean {
+		return nativePathFromPath.isAbsolute(path);
+	},
+	join: function(...args: string[]) {
+		return nativePathFromPath.join(...args);
+	}
+}
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
 const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*([0-9-]*),\s*([0-9-]*),\s*(0x\d{4}),.*/i;
@@ -42,14 +62,18 @@ export class SourceMap {
 	}
 
 	private parse(fileC: string): void {
-		if (!nativePath.isAbsolute(fileC))
+		let nat = fileC;
+		if (!nativePath.isAbsolute(fileC)) {
+			nat = nativePathFromPath.resolve(this.cwd, fileC);
 			fileC = nativePath.resolve(this.cwd, fileC);
+		}
 
 		const basename = nativePath.basename(fileC);
 		const cleanedFile = basename.substring(0, basename.lastIndexOf(".c"));
 
 		let lineNumber = 0;
-		let reader = new readline(fileC);
+
+		let reader = new readline(process.platform === "win32" ? nat : fileC);
 		let row: false | Buffer;
 		let fileCobol: string;
 		let functionName: string;
