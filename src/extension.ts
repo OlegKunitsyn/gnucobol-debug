@@ -8,8 +8,8 @@ const dockerMessage = "Property 'docker' is not defined in launch.json";
 
 export function activate(context: vscode.ExtensionContext) {
     const dockerStart = vscode.commands.registerCommand('gnucobol-debug.dockerStart', function () {
-        const workspaceRoot: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
         let config: vscode.DebugConfiguration;
+        var workspaceRoot: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
         for (config of vscode.workspace.getConfiguration('launch', vscode.workspace.workspaceFolders[0].uri).get('configurations') as []) {
             if (config.type !== 'gdb') {
                 continue;
@@ -18,6 +18,13 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showInformationMessage(dockerMessage);
                 break;
             }
+            if(process.platform === "win32") {
+                workspaceRoot = workspaceRoot
+                    .replace(/.*:/,s => "/" + s.toLowerCase().replace(":",""))
+                    .replace(/\\/g,"/");
+            }
+            vscode.workspace.workspaceFolders[0].uri.fsPath
+                .replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/")
             dockerTerminal.show(true);
             dockerTerminal.sendText(`docker run -d -i --name gnucobol -w ${workspaceRoot} -v ${workspaceRoot}:${workspaceRoot} ${config.docker}`);
             break;
