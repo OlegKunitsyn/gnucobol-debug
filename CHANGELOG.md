@@ -1,3 +1,6 @@
+## 2.31.28
+* Fix debugging via Docker on Windows [Issue #89](https://github.com/OlegKunitsyn/gnucobol-debug/issues/89) by Aaron Paterson
+
 ## 2.31.27
 * Toggable details view [Issue #66](https://github.com/OlegKunitsyn/gnucobol-debug/issues/66) by Bruno Pacheco
 * Docker image selection [Issue #82](https://github.com/OlegKunitsyn/gnucobol-debug/issues/82)
