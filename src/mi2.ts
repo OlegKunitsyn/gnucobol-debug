@@ -2,10 +2,39 @@ import { Breakpoint, IDebugger, MIError, Stack, Thread, DebuggerVariable, Variab
 import * as ChildProcess from "child_process";
 import { EventEmitter } from "events";
 import { MINode, parseMI } from './parser.mi2';
-import * as nativePath from "path";
+import * as nativePathFromPath from "path";
 import * as fs from "fs";
 import { SourceMap } from "./parser.c";
 import { parseExpression, cleanRawValue } from "./functions";
+
+const nativePath = {
+	resolve: function(...args: string[]): string {
+		let nat = nativePathFromPath.resolve(...args);
+		if(process.platform === "win32") {
+			return nat.replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/");
+		}
+		return nat;
+	},
+	dirname: function(path: string): string {
+		let nat = nativePathFromPath.dirname(path);
+		if(process.platform === "win32") {
+			return nat.replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/");
+		}
+		return nat;
+	},
+	basename: function(path: string): string {
+		return nativePathFromPath.basename(path);
+	},
+	isAbsolute: function(path: string): boolean {
+		return nativePathFromPath.isAbsolute(path);
+	},
+	join: function(...args: string[]) {
+		return nativePathFromPath.join(...args);
+	},
+	normalize: function(path: string) {
+		return nativePathFromPath.normalize(path);
+	}
+}
 
 const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,})/;
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
@@ -57,8 +86,8 @@ export class MI2 extends EventEmitter implements IDebugger {
 	}
 
 	load(cwd: string, target: string, targetargs: string, group: string[]): Thenable<any> {
-		if (!nativePath.isAbsolute(target))
-			target = nativePath.join(cwd, target);
+		if (!nativePath.isAbsolute(target) || (this.cobcpath === "docker" && this.gdbpath === "docker"))
+			target = nativePath.resolve(cwd, target);
 		group.forEach(e => { e = nativePath.join(cwd, e); });
 
 		return new Promise((resolve, reject) => {
@@ -121,7 +150,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 				}
 
 				target = nativePath.resolve(cwd, nativePath.basename(target));
-				if (process.platform === "win32") {
+				if (process.platform === "win32" && this.cobcpath !== "docker" && this.gdbpath !== "docker") {
 					target = target.split('.').slice(0, -1).join('.') + '.exe';
 				} else {
 					target = target.split('.').slice(0, -1).join('.');
@@ -206,6 +235,10 @@ export class MI2 extends EventEmitter implements IDebugger {
 	protected initCommands(target: string, targetargs: string, cwd: string) {
 		if (!nativePath.isAbsolute(target))
 			target = nativePath.join(cwd, target);
+		if(process.platform === "win32") {
+			cwd = nativePath.dirname(target);
+		}
+
 		const cmds = [
 			this.sendCommand("gdb-set target-async on", false),
 			this.sendCommand("gdb-set print repeats 1000", false),
