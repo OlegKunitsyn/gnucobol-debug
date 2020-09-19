@@ -1,23 +1,22 @@
 import * as readline from "n-readlines";
 import * as nativePathFromPath from "path";
-import { join } from "path";
 import { DebuggerVariable, Attribute, VariableType } from "./debugger";
 
 const nativePath = {
-	resolve: function(...args: string[]): string {
+	resolve: function (...args: string[]): string {
 		let nat = nativePathFromPath.resolve(...args);
-		if(process.platform === "win32") {
-			return nat.replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/");
+		if (process.platform === "win32") {
+			return nat.replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/");
 		}
 		return nat;
 	},
-	basename: function(path: string): string {
+	basename: function (path: string): string {
 		return nativePathFromPath.basename(path);
 	},
-	isAbsolute: function(path: string): boolean {
+	isAbsolute: function (path: string): boolean {
 		return nativePathFromPath.isAbsolute(path);
 	},
-	join: function(...args: string[]) {
+	join: function (...args: string[]) {
 		return nativePathFromPath.join(...args);
 	}
 }
@@ -174,26 +173,30 @@ export class SourceMap {
 	}
 
 	public hasLineCobol(fileC: string, lineC: number): boolean {
-		if (!nativePath.isAbsolute(fileC))
+		if (!nativePath.isAbsolute(fileC)) {
 			fileC = nativePath.join(this.cwd, fileC);
+		}
 		return this.lines.some(e => e.fileC === fileC && e.lineC === lineC);
 	}
 
 	public hasLineC(fileCobol: string, lineCobol: number): boolean {
-		if (!nativePath.isAbsolute(fileCobol))
+		if (!nativePath.isAbsolute(fileCobol)) {
 			fileCobol = nativePath.join(this.cwd, fileCobol);
+		}
 		return this.lines.some(e => e.fileCobol === fileCobol && e.lineCobol === lineCobol);
 	}
 
 	public getLineC(fileCobol: string, lineCobol: number): Line {
-		if (!nativePath.isAbsolute(fileCobol))
+		if (!nativePath.isAbsolute(fileCobol)) {
 			fileCobol = nativePath.join(this.cwd, fileCobol);
+		}
 		return this.lines.find(e => e.fileCobol === fileCobol && e.lineCobol === lineCobol) ?? new Line('', 0, '', 0);
 	}
 
 	public getLineCobol(fileC: string, lineC: number): Line {
-		if (!nativePath.isAbsolute(fileC))
+		if (!nativePath.isAbsolute(fileC)) {
 			fileC = nativePath.join(this.cwd, fileC);
+		}
 		return this.lines.find(e => e.fileC === fileC && e.lineC === lineC) ?? new Line('', 0, '', 0);
 	}
 

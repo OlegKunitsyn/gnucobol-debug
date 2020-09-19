@@ -18,13 +18,13 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showInformationMessage(dockerMessage);
                 break;
             }
-            if(process.platform === "win32") {
+            if (process.platform === "win32") {
                 workspaceRoot = workspaceRoot
-                    .replace(/.*:/,s => "/" + s.toLowerCase().replace(":",""))
-                    .replace(/\\/g,"/");
+                    .replace(/.*:/, s => "/" + s.toLowerCase().replace(":", ""))
+                    .replace(/\\/g, "/");
             }
             vscode.workspace.workspaceFolders[0].uri.fsPath
-                .replace(/.*:/,s => "/" + s.toLowerCase().replace(":","")).replace(/\\/g,"/")
+                .replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/")
             dockerTerminal.show(true);
             dockerTerminal.sendText(`docker run -d -i --name gnucobol -w ${workspaceRoot} -v ${workspaceRoot}:${workspaceRoot} ${config.docker}`);
             break;
