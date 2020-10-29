@@ -1,22 +1,22 @@
-import { IRecordParser, Arc, Block, GcnoFunction, DataInput } from './gcov';
+import {IRecordParser, Arc, Block, GcnoFunction, DataInput} from './gcov';
 
-export class GcdaRecordsParser implements IRecordParser{
+export class GcdaRecordsParser implements IRecordParser {
 
-    readonly GCOV_DATA_MAGIC:number = 0x67636461;
-    readonly GCOV_TAG_FUNCTION:number = 0x01000000;
-    readonly GCOV_COUNTER_ARCS:number = 0x01a10000;
-    readonly GCOV_TAG_OBJECT_SYMMARY:number = 0xa1000000;
-    readonly GCOV_TAG_PROGRAM_SUMMARY:number = 0xa3000000;
-    readonly GCC_VER_900:number = 1094266922;
-    private gcnoFunctions:GcnoFunction[];
+    readonly GCOV_DATA_MAGIC: number = 0x67636461;
+    readonly GCOV_TAG_FUNCTION: number = 0x01000000;
+    readonly GCOV_COUNTER_ARCS: number = 0x01a10000;
+    readonly GCOV_TAG_OBJECT_SYMMARY: number = 0xa1000000;
+    readonly GCOV_TAG_PROGRAM_SUMMARY: number = 0xa3000000;
+    readonly GCC_VER_900: number = 1094266922;
+    private gcnoFunctions: GcnoFunction[];
 
-    constructor(gcnoFunctions:GcnoFunction[]) {
+    constructor(gcnoFunctions: GcnoFunction[]) {
         this.gcnoFunctions = gcnoFunctions;
     }
 
-    public parse(stream:DataInput):void{
+    public parse(stream: DataInput): void {
         let magic = 0;
-        let gcnoFunction:GcnoFunction = null;
+        let gcnoFunction: GcnoFunction = null;
         magic = stream.readInt();
 
         if (magic == this.GCOV_DATA_MAGIC) {
@@ -64,12 +64,12 @@ export class GcdaRecordsParser implements IRecordParser{
                         if (gcnoFunction == null) {
                             throw new Error("Parsing error");
                         }
-                        let blocks:Block[] = gcnoFunction.functionBlocks;
+                        let blocks: Block[] = gcnoFunction.functionBlocks;
                         if (blocks.length === 0) {
                             throw new Error("Parsing error");
                         }
                         for (let block of blocks) {
-                            let exitArcs:Arc[] = block.exitArcs;
+                            let exitArcs: Arc[] = block.exitArcs;
                             for (let exitArc of exitArcs) {
                                 if (!exitArc.isOnTree) {
                                     let arcsCount = stream.readLong();

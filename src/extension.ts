@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { GDBDebugSession } from "./gdb";
-import { CoverageStatus } from './coverage';
-import { DebuggerSettings } from "./settings";
+import {GDBDebugSession} from "./gdb";
+import {CoverageStatus} from './coverage';
+import {DebuggerSettings} from "./settings";
 
 const dockerTerminal = vscode.window.createTerminal("GnuCOBOL Docker");
 const dockerMessage = "Property 'docker' is not defined in launch.json";
@@ -9,7 +9,7 @@ const dockerMessage = "Property 'docker' is not defined in launch.json";
 export function activate(context: vscode.ExtensionContext) {
     const dockerStart = vscode.commands.registerCommand('gnucobol-debug.dockerStart', function () {
         let config: vscode.DebugConfiguration;
-        var workspaceRoot: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        let workspaceRoot: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
         for (config of vscode.workspace.getConfiguration('launch', vscode.workspace.workspaceFolders[0].uri).get('configurations') as []) {
             if (config.type !== 'gdb') {
                 continue;
@@ -24,11 +24,11 @@ export function activate(context: vscode.ExtensionContext) {
                     .replace(/\\/g, "/");
             }
             vscode.workspace.workspaceFolders[0].uri.fsPath
-                .replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/")
+                .replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/");
             dockerTerminal.show(true);
             dockerTerminal.sendText(`docker run -d -i --name gnucobol -w ${workspaceRoot} -v ${workspaceRoot}:${workspaceRoot} ${config.docker}`);
             break;
-        };
+        }
     });
 
     const dockerStop = vscode.commands.registerCommand('gnucobol-debug.dockerStop', function () {
@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
             dockerTerminal.show(true);
             dockerTerminal.sendText(`docker rm --force gnucobol`);
             break;
-        };
+        }
     });
 
     context.subscriptions.push(
@@ -92,7 +92,9 @@ class GdbConfigurationProvider implements vscode.DebugConfigurationProvider {
 }
 
 class GdbAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
-    constructor(public coverageBar: CoverageStatus, public debugSession: GDBDebugSession) { }
+    constructor(public coverageBar: CoverageStatus, public debugSession: GDBDebugSession) {
+    }
+
     createDebugAdapterDescriptor(_session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         this.debugSession.coverageStatus = this.coverageBar;
         return new vscode.DebugAdapterInlineImplementation(this.debugSession);

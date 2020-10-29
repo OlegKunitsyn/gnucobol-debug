@@ -1,4 +1,4 @@
-import { IRecordParser, SourceFile, Block, Arc, GcnoFunction, DataInput } from './gcov';
+import {IRecordParser, SourceFile, Block, Arc, GcnoFunction, DataInput} from './gcov';
 
 export class GcnoRecordsParser implements IRecordParser {
 

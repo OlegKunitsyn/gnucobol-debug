@@ -2,8 +2,9 @@
 	"defaultSeverity": "error",
 	"extends": "tslint:recommended",
 	"rules": {
-		"no-null-keyword": true,
-		"indent": [true, "tabs"],
+		"no-null-keyword": false,
+		"no-eval": false,
+		"indent": [true, "spaces"],
 		"array-type": false,
 		"arrow-parens": false,
 		"arrow-return-shorthand": false,
