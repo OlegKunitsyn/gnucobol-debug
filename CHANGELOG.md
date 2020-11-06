@@ -1,3 +1,6 @@
+## 2.31.30
+* Code cleanup
+
 ## 2.31.28
 * Fix debugging via Docker on Windows [Issue #89](https://github.com/OlegKunitsyn/gnucobol-debug/issues/89) by Aaron Paterson
 
