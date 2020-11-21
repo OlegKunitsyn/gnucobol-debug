@@ -90,7 +90,7 @@ export class NumericValueParser {
 
         value = wholeNumber + decimals;
 
-        let diff = fieldSize - value.length;
+        const diff = fieldSize - value.length;
         if (diff > 0) {
             let append = "";
             for (let i = 0; i < diff; i++) {
@@ -111,7 +111,7 @@ export class NumericValueParser {
         }
 
         if (signed && isNegative) {
-            let sign = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
+            const sign = String.fromCharCode(parseInt(value[value.length - 1]) + this.ZERO_SIGN_CHAR_CODE);
             value = value.substring(0, value.length - 1) + sign;
         }
 
@@ -166,7 +166,7 @@ export class AlphanumericValueParser {
             value = value.substring(0, value.length - 1);
         }
 
-        let diff = fieldSize - value.length;
+        const diff = fieldSize - value.length;
         if (diff > 0) {
             let suffix = "";
             for (let i = 0; i < diff; i++) {
@@ -180,7 +180,7 @@ export class AlphanumericValueParser {
     }
 
     public static parse(valueStr: string, fieldSize: number): string {
-        let value = valueStr;
+        const value = valueStr;
         let shift = 0;
         if (value.startsWith('"')) {
             shift = 1;

@@ -82,7 +82,7 @@ export class CoverageStatus implements Disposable {
         }
         const red: Range[] = [];
         const green: Range[] = [];
-        for (let line of this.coverage) {
+        for (const line of this.coverage) {
             if (this.sourceMap.hasLineCobol(line.fileC, line.lineC)) {
                 const map = this.sourceMap.getLineCobol(line.fileC, line.lineC);
                 if (editor.document.uri.fsPath !== map.fileCobol) {

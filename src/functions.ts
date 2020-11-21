@@ -63,7 +63,7 @@ export function parseExpression(expression: string, functionName: string, source
     let openQuote = false;
     let quoteMarker = null;
     for (let i = 0; i < expression.length; i++) {
-        let char = expression[i];
+        const char = expression[i];
         if (openQuote) {
             token += char;
             if (char === quoteMarker) {

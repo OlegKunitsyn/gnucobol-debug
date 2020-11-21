@@ -301,7 +301,7 @@ export class GDBDebugSession extends DebugSession {
         const cb = (() => {
             this.debugReady = true;
             this.miDebugger.clearBreakPoints().then(() => {
-                let path = args.source.path;
+                const path = args.source.path;
                 const all = args.breakpoints.map(brk => {
                     return this.miDebugger.addBreakPoint({
                         file: path,
@@ -371,7 +371,7 @@ export class GDBDebugSession extends DebugSession {
             const ret: StackFrame[] = [];
             stack.forEach(element => {
                 let source = undefined;
-                let file = element.file;
+                const file = element.file;
                 if (file) {
                     source = new Source(element.fileName, file);
                 }
@@ -467,7 +467,7 @@ export class GDBDebugSession extends DebugSession {
                 }
 
                 for (const child of stackVariable.children.values()) {
-                    let childId = `${id}.${child.cobolName}`;
+                    const childId = `${id}.${child.cobolName}`;
                     let reference = 0;
                     if (this.showVariableDetails || !!child.children.size) {
                         reference = this.variableHandles.create(childId);

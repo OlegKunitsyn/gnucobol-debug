@@ -130,18 +130,18 @@ export class GcnoFunction {
     }
 
     public addLineCounts(sourceFiles: SourceFile[]): void {
-        let linesToCalculate: Set<Line> = new Set<Line>();
-        for (let block of this.functionBlocks) {
+        const linesToCalculate: Set<Line> = new Set<Line>();
+        for (const block of this.functionBlocks) {
             let sourceFile: SourceFile = null;
-            for (let file of sourceFiles) {
+            for (const file of sourceFiles) {
                 if (file.index == block.sourceIndex) {
                     sourceFile = file;
                     break;
                 }
             }
-            for (let lineNumber of block.lineNumbers) {
+            for (const lineNumber of block.lineNumbers) {
                 if (sourceFile != null && lineNumber < sourceFile.lines.length) {
-                    let line = sourceFile.lines[lineNumber];
+                    const line = sourceFile.lines[lineNumber];
                     line.exists = true;
                     if (line.blocks.size > 1) {
                         linesToCalculate.add(line);
@@ -152,10 +152,10 @@ export class GcnoFunction {
                 }
             }
         }
-        for (let line of linesToCalculate) {
+        for (const line of linesToCalculate) {
             let count = 0;
-            for (let block of line.blocks) {
-                for (let arc of block.entryArcs) {
+            for (const block of line.blocks) {
+                for (const arc of block.entryArcs) {
                     if (!line.blocks.has(arc.srcBlock)) {
                         count += arc.count;
                     }
@@ -166,8 +166,8 @@ export class GcnoFunction {
     }
 
     public solveGraphFunction(): void {
-        let validBlocks: Block[] = [];
-        let invalidBlocks: Block[] = [];
+        const validBlocks: Block[] = [];
+        const invalidBlocks: Block[] = [];
 
         if (this.functionBlocks.length >= 2) {
             if (this.functionBlocks[0].predictionsCount == 0) {
@@ -178,7 +178,7 @@ export class GcnoFunction {
             }
         }
 
-        for (let b of this.functionBlocks) {
+        for (const b of this.functionBlocks) {
             b.isInvalidChain = true;
             invalidBlocks.push(b);
         }
@@ -186,7 +186,7 @@ export class GcnoFunction {
         while (validBlocks.length > 0 || invalidBlocks.length > 0) {
             if (invalidBlocks.length > 0) {
                 for (let i = invalidBlocks.length - 1; i >= 0; i--) {
-                    let invalidBlock: Block = invalidBlocks[i];
+                    const invalidBlock: Block = invalidBlocks[i];
                     let total = 0;
                     invalidBlocks.pop();
                     invalidBlock.isInvalidChain = false;
@@ -194,14 +194,14 @@ export class GcnoFunction {
                         continue;
 
                     if (invalidBlock.successCount == 0) {
-                        let exitArcs: Arc[] = invalidBlock.exitArcs;
-                        for (let arc of exitArcs) {
+                        const exitArcs: Arc[] = invalidBlock.exitArcs;
+                        for (const arc of exitArcs) {
                             total += arc.count;
                         }
                     }
                     if (invalidBlock.predictionsCount == 0 && total == 0) {
-                        let entryArcs: Arc[] = invalidBlock.entryArcs;
-                        for (let arc of entryArcs) {
+                        const entryArcs: Arc[] = invalidBlock.entryArcs;
+                        for (const arc of entryArcs) {
                             total += arc.count;
                         }
                     }
@@ -213,8 +213,8 @@ export class GcnoFunction {
                 }
             }
             while (validBlocks.length > 0) {
-                let last = validBlocks.length - 1;
-                let vb: Block = validBlocks[last];
+                const last = validBlocks.length - 1;
+                const vb: Block = validBlocks[last];
                 let invarc: Arc = null;
                 let total = 0;
                 validBlocks.pop();
@@ -222,7 +222,7 @@ export class GcnoFunction {
                 if (vb.successCount === 1) {
                     let dstBlock: Block;
                     total = vb.count;
-                    for (let extAr of vb.exitArcs) {
+                    for (const extAr of vb.exitArcs) {
                         total -= extAr.count;
                         if (extAr.isValid == false) {
                             invarc = extAr;
@@ -252,7 +252,7 @@ export class GcnoFunction {
                     total = vb.count;
                     invarc = null;
 
-                    for (let entrAr of vb.entryArcs) {
+                    for (const entrAr of vb.entryArcs) {
                         total -= entrAr.count;
                         if (!entrAr.isValid) {
                             invarc = entrAr;
@@ -283,22 +283,22 @@ export class GcnoFunction {
 export function parseGcov(gcovFiles: string[]): Coverage[] {
     let gcdaRecordsParser: GcdaRecordsParser;
     let stream: DataInput;
-    let sourceFiles: SourceFile[] = [];
-    let gcnoFunctions: GcnoFunction[] = [];
-    let sourceMap: Map<string, SourceFile> = new Map<string, SourceFile>();
+    const sourceFiles: SourceFile[] = [];
+    const gcnoFunctions: GcnoFunction[] = [];
+    const sourceMap: Map<string, SourceFile> = new Map<string, SourceFile>();
 
-    for (let gcovFile of gcovFiles) {
+    for (const gcovFile of gcovFiles) {
         // parse GCNO
         let file = gcovFile + '.gcno';
         if (!fs.existsSync(file)) {
             throw Error("File not found: " + file);
         }
         stream = new DataInput(fs.readFileSync(file));
-        let gcnoRecordsParser = new GcnoRecordsParser(sourceMap, sourceFiles);
+        const gcnoRecordsParser = new GcnoRecordsParser(sourceMap, sourceFiles);
         gcnoRecordsParser.parse(stream);
 
         // add new functions
-        for (let f of gcnoRecordsParser.getFunctions()) {
+        for (const f of gcnoRecordsParser.getFunctions()) {
             gcnoFunctions.push(f);
         }
 
@@ -315,16 +315,16 @@ export function parseGcov(gcovFiles: string[]): Coverage[] {
         gcdaRecordsParser.parse(stream);
     }
 
-    let coverages: Map<string, Coverage> = new Map<string, Coverage>();
-    for (let sourceFile of sourceFiles) {
-        let linesCount = sourceFile.linesCount;
+    const coverages: Map<string, Coverage> = new Map<string, Coverage>();
+    for (const sourceFile of sourceFiles) {
+        const linesCount = sourceFile.linesCount;
         for (let j = 0; j < linesCount; j++) {
             sourceFile.lines.push(new Line());
         }
-        for (let gcnoFunction of sourceFile.functions) {
-            for (let block of gcnoFunction.functionBlocks) {
-                for (let lineno of block.lineNumbers) {
-                    let line: Line = sourceFile.lines[lineno];
+        for (const gcnoFunction of sourceFile.functions) {
+            for (const block of gcnoFunction.functionBlocks) {
+                for (const lineno of block.lineNumbers) {
+                    const line: Line = sourceFile.lines[lineno];
                     line.blocks.add(block);
                 }
             }
@@ -333,12 +333,12 @@ export function parseGcov(gcovFiles: string[]): Coverage[] {
         }
 
         // coverage
-        for (let line of sourceFile.lines) {
+        for (const line of sourceFile.lines) {
             if (!line.exists) {
                 continue;
             }
-            for (let block of line.blocks) {
-                for (let lineNum of block.lineNumbers) {
+            for (const block of line.blocks) {
+                for (const lineNum of block.lineNumbers) {
                     coverages.set(`${sourceFile.name}${lineNum}`, {
                         fileC: sourceFile.name,
                         lineC: lineNum,

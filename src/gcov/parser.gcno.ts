@@ -39,7 +39,7 @@ export class GcnoRecordsParser implements IRecordParser {
             }
         }
 
-        let version = stream.readInt();
+        const version = stream.readInt();
         stream.readInt();
         while (true) {
             try {
@@ -55,17 +55,17 @@ export class GcnoRecordsParser implements IRecordParser {
                         if (parseFirstFunction) {
                             this.gcnoFunctions.push(this.gcnoFunction);
                         }
-                        let ident = stream.readInt();
-                        let checksum = stream.readInt();
+                        const ident = stream.readInt();
+                        const checksum = stream.readInt();
                         if (version >= this.GCC_VER_407) {
                             stream.readInt();
                         }
-                        let name = stream.readString();
+                        const name = stream.readString();
                         if (version >= this.GCC_VER_810) {
                             stream.readInt();
                         }
-                        let srcFile = stream.readString();
-                        let firstLineNumber = stream.readInt();
+                        const srcFile = stream.readString();
+                        const firstLineNumber = stream.readInt();
                         if (version >= this.GCC_VER_810) {
                             stream.readInt();
                             stream.readInt();
@@ -74,7 +74,7 @@ export class GcnoRecordsParser implements IRecordParser {
                             stream.readInt();
                         }
                         this.gcnoFunction = new GcnoFunction(ident, checksum, srcFile, firstLineNumber);
-                        let file = this.findOrAdd(this.gcnoFunction.srcFile);
+                        const file = this.findOrAdd(this.gcnoFunction.srcFile);
                         if (this.gcnoFunction.firstLineNumber >= file.linesCount) {
                             file.linesCount = this.gcnoFunction.firstLineNumber + 1;
                         }
@@ -94,13 +94,13 @@ export class GcnoRecordsParser implements IRecordParser {
                         }
                         break;
                     case this.GCOV_TAG_ARCS:
-                        let srcBlockIdx = stream.readInt();
-                        let block = blocks[srcBlockIdx];
-                        let arcs: Arc[] = [];
+                        const srcBlockIdx = stream.readInt();
+                        const block = blocks[srcBlockIdx];
+                        const arcs: Arc[] = [];
                         for (let i = 0; i < (length - 1) / 2; i++) {
-                            let dstBlockIdx = stream.readInt();
-                            let flag = stream.readInt();
-                            let arc = new Arc(srcBlockIdx, dstBlockIdx, flag, blocks);
+                            const dstBlockIdx = stream.readInt();
+                            const flag = stream.readInt();
+                            const arc = new Arc(srcBlockIdx, dstBlockIdx, flag, blocks);
                             arc.dstBlock.entryArcs.push(arc);
                             arc.dstBlock.predictionsCount++;
                             arcs.push(arc);
@@ -110,12 +110,12 @@ export class GcnoRecordsParser implements IRecordParser {
                         this.gcnoFunction.functionBlocks = blocks;
                         break;
                     case this.GCOV_TAG_LINES:
-                        let blockNumber = stream.readInt();
-                        let lineNumbers: number[] = [];
+                        const blockNumber = stream.readInt();
+                        const lineNumbers: number[] = [];
                         while (true) {
-                            let lineNumber = stream.readInt();
+                            const lineNumber = stream.readInt();
                             if (lineNumber == 0) {
-                                let fileName = stream.readString();
+                                const fileName = stream.readString();
                                 if (fileName === "") {
                                     break;
                                 }

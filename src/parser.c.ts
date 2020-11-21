@@ -4,7 +4,7 @@ import {DebuggerVariable, Attribute, VariableType} from "./debugger";
 
 const nativePath = {
     resolve: function (...args: string[]): string {
-        let nat = nativePathFromPath.resolve(...args);
+        const nat = nativePathFromPath.resolve(...args);
         if (process.platform === "win32") {
             return nat.replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/");
         }
@@ -74,12 +74,12 @@ export class SourceMap {
 
         let lineNumber = 0;
 
-        let reader = new readline(process.platform === "win32" ? nat : fileC);
+        const reader = new readline(process.platform === "win32" ? nat : fileC);
         let row: false | Buffer;
         let fileCobol: string;
         let functionName: string;
         while (row = reader.next()) {
-            let line = row.toString();
+            const line = row.toString();
             let match = fileCobolRegex.exec(line);
             if (match) {
                 if (!nativePath.isAbsolute(match[1])) {

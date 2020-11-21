@@ -9,14 +9,14 @@ import {parseExpression, cleanRawValue} from "./functions";
 
 const nativePath = {
     resolve: function (...args: string[]): string {
-        let nat = nativePathFromPath.resolve(...args);
+        const nat = nativePathFromPath.resolve(...args);
         if (process.platform === "win32") {
             return nat.replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/");
         }
         return nat;
     },
     dirname: function (path: string): string {
-        let nat = nativePathFromPath.dirname(path);
+        const nat = nativePathFromPath.dirname(path);
         if (process.platform === "win32") {
             return nat.replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/");
         }
@@ -592,7 +592,7 @@ export class MI2 extends EventEmitter implements IDebugger {
             } else if (this.hasCobPutFieldStringFunction && variable.cName.startsWith("f_")) {
                 await this.sendCommand(`data-evaluate-expression "(int)cob_put_field_str(&${variable.cName}, \\"${cleanedRawValue}\\")"`);
             } else {
-                let finalValue = variable.formatValue(cleanedRawValue);
+                const finalValue = variable.formatValue(cleanedRawValue);
                 let cName = variable.cName;
                 if (variable.cName.startsWith("f_")) {
                     cName += ".data";
@@ -652,7 +652,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                 }
             }
 
-            let map = this.map.getLineC(breakpoint.file, breakpoint.line);
+            const map = this.map.getLineC(breakpoint.file, breakpoint.line);
             if (map.fileC === '' && map.lineC === 0) {
                 return;
             }
@@ -666,7 +666,7 @@ export class MI2 extends EventEmitter implements IDebugger {
             this.sendCommand("break-insert -f " + location).then((result) => {
                 if (result.resultRecords.resultClass == "done") {
                     const bkptNum = parseInt(result.result("bkpt.number"));
-                    let map = this.map.getLineCobol(result.result("bkpt.file"), parseInt(result.result("bkpt.line")));
+                    const map = this.map.getLineCobol(result.result("bkpt.file"), parseInt(result.result("bkpt.line")));
                     const newBrk = {
                         file: map.fileCobol,
                         line: map.lineCobol,
@@ -780,7 +780,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                 line = parseInt(lnstr);
             }
 
-            let map = this.map.getLineCobol(file, line);
+            const map = this.map.getLineCobol(file, line);
             return {
                 address: addr,
                 fileName: nativePath.basename(map.fileCobol),
@@ -811,7 +811,7 @@ export class MI2 extends EventEmitter implements IDebugger {
         const variables = variablesResponse.result("variables");
 
         const currentFrameVariables = new Set<DebuggerVariable>();
-        for (let element of variables) {
+        for (const element of variables) {
             const key = MINode.valueOf(element, "name");
             const value = MINode.valueOf(element, "value");
 
@@ -853,7 +853,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
         let [finalExpression, variableNames] = parseExpression(expression, functionName, this.map);
 
-        for (let variableName of variableNames) {
+        for (const variableName of variableNames) {
             const variable = this.map.getVariableByC(`${functionName}.${variableName}`);
             if (variable) {
                 await this.evalVariable(variable, thread, frame);
@@ -863,7 +863,7 @@ export class MI2 extends EventEmitter implements IDebugger {
         }
 
         try {
-            let result = `${eval(finalExpression)}`;
+            const result = `${eval(finalExpression)}`;
             if (/[^0-9.\-+]/g.test(result)) {
                 return `"${result}"`;
             }

@@ -95,7 +95,7 @@ class GdbAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactor
     constructor(public coverageBar: CoverageStatus, public debugSession: GDBDebugSession) {
     }
 
-    createDebugAdapterDescriptor(_session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+    createDebugAdapterDescriptor(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
         this.debugSession.coverageStatus = this.coverageBar;
         return new vscode.DebugAdapterInlineImplementation(this.debugSession);
     }

@@ -31,23 +31,23 @@ export class GcdaRecordsParser implements IRecordParser {
             }
         }
 
-        let version = stream.readInt();
+        const version = stream.readInt();
         stream.readInt();
         while (true) {
             try {
-                let tag = stream.readInt();
+                const tag = stream.readInt();
                 if (tag == 0) {
                     continue;
                 }
-                let length = stream.readInt();
+                const length = stream.readInt();
                 switch (tag) {
                     case this.GCOV_TAG_FUNCTION: {
-                        let ident = stream.readInt();
+                        const ident = stream.readInt();
                         if (this.gcnoFunctions.length > 0) {
-                            for (let f of this.gcnoFunctions) {
+                            for (const f of this.gcnoFunctions) {
                                 if (f.ident === ident) {
                                     gcnoFunction = f;
-                                    let checksum = stream.readInt();
+                                    const checksum = stream.readInt();
                                     if (f.checksum !== checksum) {
                                         throw new Error("Parsing error");
                                     }
@@ -64,15 +64,15 @@ export class GcdaRecordsParser implements IRecordParser {
                         if (gcnoFunction == null) {
                             throw new Error("Parsing error");
                         }
-                        let blocks: Block[] = gcnoFunction.functionBlocks;
+                        const blocks: Block[] = gcnoFunction.functionBlocks;
                         if (blocks.length === 0) {
                             throw new Error("Parsing error");
                         }
-                        for (let block of blocks) {
-                            let exitArcs: Arc[] = block.exitArcs;
-                            for (let exitArc of exitArcs) {
+                        for (const block of blocks) {
+                            const exitArcs: Arc[] = block.exitArcs;
+                            for (const exitArc of exitArcs) {
                                 if (!exitArc.isOnTree) {
-                                    let arcsCount = stream.readLong();
+                                    const arcsCount = stream.readLong();
                                     exitArc.count = arcsCount;
                                     exitArc.isValid = true;
                                     block.successCount--;
