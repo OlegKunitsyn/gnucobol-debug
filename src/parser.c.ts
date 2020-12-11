@@ -5,7 +5,7 @@ import {DebuggerVariable, Attribute, VariableType} from "./debugger";
 const nativePath = {
     resolve: function (...args: string[]): string {
         const nat = nativePathFromPath.resolve(...args);
-        if (process.platform === "win32") {
+        if (process.platform === "win32" && this.cobcpath === "docker" && this.gdbpath === "docker") {
             return nat.replace(/.*:/, s => "/" + s.toLowerCase().replace(":", "")).replace(/\\/g, "/");
         }
         return nat;
