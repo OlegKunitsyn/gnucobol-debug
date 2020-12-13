@@ -31,7 +31,7 @@ An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplac
 ![Screenshot](screenshot.png)
 
 ### Requirements
-A COBOL-syntax extension i.e. `bitlang.cobol`, `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `ibm.zopeneditor` installed. Otherwise, the breakpoints will be unavailable. 
+A COBOL-syntax extension i.e. `bitlang.cobol` (recommended), `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `ibm.zopeneditor` installed. Otherwise, the breakpoints will be unavailable. 
 
 Now you may choose between *local* and *container* execution environment. Or try both of them :)
 
@@ -42,6 +42,10 @@ Now you may choose between *local* and *container* execution environment. Or try
 #### Container
 * [GnuCOBOL Docker](https://hub.docker.com/r/olegkunitsyn/gnucobol) container up and running. 
 The image includes GnuCOBOL,  GNU Debugger and all required dependencies needed to debug or execute your code. See an example below.
+
+#### Windows users
+The extension has an in-progress [Issue #29](https://github.com/OlegKunitsyn/gnucobol-debug/issues/29) accessing native Windows and mixed Docker-Windows paths.
+Your help would be greatly appreciated.
 
 ### Usage
 When your `launch.json` config is set up, you can debug or execute your COBOL program. If you debug a Compilation Group (main- and sub- programs), you need to list sub-programs inside `group` property. Here's an example:

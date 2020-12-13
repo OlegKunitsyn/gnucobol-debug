@@ -1,3 +1,6 @@
+## 2.31.31
+* Improve debugging on Windows using Trembley's packages [Issue #29](https://github.com/OlegKunitsyn/gnucobol-debug/issues/29)
+
 ## 2.31.30
 * Code cleanup
 
