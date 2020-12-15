@@ -22,6 +22,7 @@ const nativePath = {
 };
 
 const procedureRegex = /\/\*\sLine:\s([0-9]+)/i;
+const procedureFixRegex = /#line\s([0-9]+)\s".*\.c"/i;
 const attributeRegex = /static\sconst\scob_field_attr\s(a_[0-9]+).*\{(0x\d+),\s*([0-9-]*),\s*([0-9-]*),\s*(0x\d{4}),.*/i;
 const dataStorageRegex = /static\s+(.*)\s+(b_[0-9]+)(\;|\[\d+\]).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
 const fieldRegex = /static\s+cob_field\s+([0-9a-z_]+)\s+\=\s+\{(\d+)\,\s+([0-9a-z_]+).+\&(a_\d+).*\/\*\s+([0-9a-z_\-]+)\s+\*\//i;
@@ -98,6 +99,13 @@ export class SourceMap {
                     this.lines.pop();
                 }
                 this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
+            }
+            // fix new codegen
+            match = procedureFixRegex.exec(line);
+            if (match) {
+                let line = this.lines.pop();
+                line.lineC = parseInt(match[1]);
+                this.lines.push(line);
             }
             match = attributeRegex.exec(line);
             if (match) {
