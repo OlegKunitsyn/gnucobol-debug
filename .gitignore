@@ -5,4 +5,5 @@ test/resources/.vscode
 *.vsix
 sample
 hello
+hello3
 .idea/
