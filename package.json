@@ -281,6 +281,7 @@
 		"tslint": "^5.18.0"
 	},
 	"dependencies": {
+		"gcov-parse": "^1.0.0",
 		"n-readlines": "^1.0.0",
 		"vscode-debugadapter": "^1.40.0",
 		"vscode-debugprotocol": "^1.40.0"

@@ -14,11 +14,11 @@ import {
 import * as os from "os";
 import * as nativePath from "path";
 import * as ChildProcess from "child_process";
-import {Coverage, parseGcov} from "./gcov/gcov";
 import {SourceMap} from "./parser.c";
+import * as gcov from "gcov-parse";
 
 export class CoverageStatus implements Disposable {
-    private coverage: Coverage[] = [];
+    private coverages: gcov.Coverage[] = [];
     private sourceMap: SourceMap;
     private statusBar: StatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 100);
     readonly RED: TextEditorDecorationType = window.createTextEditorDecorationType({
@@ -65,7 +65,7 @@ export class CoverageStatus implements Disposable {
             }
         }
 
-        this.coverage = parseGcov(gcovFiles);
+        this.coverages = gcov.parse(gcovFiles);
         this.sourceMap = sourceMap;
         this.updateStatus();
     }
@@ -82,17 +82,19 @@ export class CoverageStatus implements Disposable {
         }
         const red: Range[] = [];
         const green: Range[] = [];
-        for (const line of this.coverage) {
-            if (this.sourceMap.hasLineCobol(line.fileC, line.lineC)) {
-                const map = this.sourceMap.getLineCobol(line.fileC, line.lineC);
-                if (editor.document.uri.fsPath !== map.fileCobol) {
-                    continue;
-                }
-                const range = new Range(map.lineCobol - 1, 0, map.lineCobol - 1, Number.MAX_VALUE);
-                if (line.hasExecuted) {
-                    green.push(range);
-                } else {
-                    red.push(range);
+        for (const coverage of this.coverages) {
+            for (const line of coverage.lines) {
+                if (this.sourceMap.hasLineCobol(coverage.file, line.line)) {
+                    const map = this.sourceMap.getLineCobol(coverage.file, line.line);
+                    if (editor.document.uri.fsPath !== map.fileCobol) {
+                        continue;
+                    }
+                    const range = new Range(map.lineCobol - 1, 0, map.lineCobol - 1, Number.MAX_VALUE);
+                    if (line.executed) {
+                        green.push(range);
+                    } else {
+                        red.push(range);
+                    }
                 }
             }
         }
