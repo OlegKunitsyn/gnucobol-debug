@@ -161,10 +161,11 @@ export class MI2 extends EventEmitter implements IDebugger {
                 }
 
                 target = nativePath.resolve(cwd, nativePath.basename(target));
+                target = target.split('.').slice(0, -1).join('.');
+                // FIXME: the following should prefix "cobcrun.exe" if in "module mode", see #13
+                // FIXME: if we need this code twice then add a comment why, otherwise move to a new function
                 if (process.platform === "win32" && this.cobcpath !== "docker" && this.gdbpath !== "docker") {
-                    target = target.split('.').slice(0, -1).join('.') + '.exe';
-                } else {
-                    target = target.split('.').slice(0, -1).join('.');
+                    target = target + '.exe';
                 }
 
                 this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, {cwd: cwd, env: this.procEnv});
@@ -233,10 +234,10 @@ export class MI2 extends EventEmitter implements IDebugger {
                 }
 
                 target = nativePath.resolve(cwd, nativePath.basename(target));
+                target = target.split('.').slice(0, -1).join('.');
+                // FIXME: the following should prefix "cobcrun.exe" if in "module mode", see #13
                 if (process.platform === "win32") {
-                    target = target.split('.').slice(0, -1).join('.') + '.exe';
-                } else {
-                    target = target.split('.').slice(0, -1).join('.');
+                    target = target + '.exe';
                 }
 
                 this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, {cwd: cwd, env: this.procEnv});
