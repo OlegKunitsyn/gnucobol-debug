@@ -45,7 +45,7 @@ export class Line {
     }
 
     public toString(): string {
-        return `${this.fileCobol} ${this.lineCobol} > ${this.fileC} ${this.lineC}`;
+        return `${this.fileCobol}:${this.lineCobol} > ${this.fileC}:${this.lineC}`;
     }
 }
 
