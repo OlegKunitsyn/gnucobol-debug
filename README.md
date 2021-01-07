@@ -43,10 +43,6 @@ Now you may choose between *local* and *container* execution environment. Or try
 * [GnuCOBOL Docker](https://hub.docker.com/r/olegkunitsyn/gnucobol) container up and running. 
 The image includes GnuCOBOL,  GNU Debugger and all required dependencies needed to debug or execute your code. See an example below.
 
-#### Windows users
-The extension has an in-progress [Issue #29](https://github.com/OlegKunitsyn/gnucobol-debug/issues/29) accessing native Windows and mixed Docker-Windows paths.
-Your help would be greatly appreciated.
-
 ### Usage
 When your `launch.json` config is set up, you can debug or execute your COBOL program. If you debug a Compilation Group (main- and sub- programs), you need to list sub-programs inside `group` property. Here's an example:
 ```json
