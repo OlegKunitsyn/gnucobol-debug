@@ -1,3 +1,6 @@
+## 2.31.33
+* Readme cleanup
+
 ## 2.31.32
 * Improve compatibility with GnuCOBOL 3.1.1+ [Issue #97](https://github.com/OlegKunitsyn/gnucobol-debug/issues/97)
 
