@@ -9,7 +9,7 @@
 		"debug",
 		"code coverage"
 	],
-	"version": "2.31.36",
+	"version": "2.31.37",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -29,7 +29,7 @@
 		"type": "git",
 		"url": "https://github.com/OlegKunitsyn/gnucobol-debug.git"
 	},
- 	"capabilities": {
+	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": true
 		}

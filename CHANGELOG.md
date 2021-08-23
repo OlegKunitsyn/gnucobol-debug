@@ -1,3 +1,7 @@
+## 2.31.37
+* Update dependencies
+* Fix badges
+
 ## 2.31.35
 * Update dependencies
 
