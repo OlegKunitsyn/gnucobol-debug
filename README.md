@@ -31,7 +31,8 @@ An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplac
 ![Screenshot](screenshot.png)
 
 ### Requirements
-A COBOL-syntax extension i.e. `bitlang.cobol` (recommended), `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `ibm.zopeneditor` installed. Otherwise, the breakpoints will be unavailable. 
+A COBOL-syntax extension i.e. `bitlang.gnucobol` (recommended, note: the previously recommended `bitlang.cobol` was split and now is intended to target MicroFocus products only), or - if you target a mainframe dialect: `broadcommfd.cobol-language-support`, `rechinformatica.rech-editor-cobol` or `ibm.zopeneditor` installed.  
+Otherwise, the breakpoints will be unavailable. 
 
 Now you may choose between *local* and *container* execution environment. Or try both of them :)
 
