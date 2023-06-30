@@ -164,6 +164,35 @@ Here's an example:
 }
 ```
 
+### Displays application output in a separate window
+Add `gdbtty` property to your `launch.json`. Here’s an example:
+```json
+{
+            "name": "COBOL debugger",
+            "type": "gdb",
+            "request": "launch",
+            "cobcargs": [
+                "-free",
+                "-x"
+            ],
+            "coverage": false,
+            "gdbtty": true
+}
+```
+![GdbTTY](gdbttydisplay.png)
+
+* Linux Requirements: `xterm`
+
+How to install xterm on Ubuntu: 
+```
+sudo apt-get install xterm
+```
+You need to call VS Code or VSCodium from the terminal, like this:
+```
+cd  cob_project
+code .
+```
+
 ### Roadmap
 - Mac
 - Unit testing
