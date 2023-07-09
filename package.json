@@ -9,7 +9,7 @@
 		"debug",
 		"code coverage"
 	],
-	"version": "2.31.37",
+	"version": "2.32.1",
 	"publisher": "OlegKunitsyn",
 	"license": "GPL-3.0",
 	"icon": "icon.png",
@@ -277,7 +277,7 @@
 		}
 	},
 	"scripts": {
-		"prepublish": "tsc -p ./",
+		"prepare": "tsc -p ./",
 		"compile": "tsc -p ./",
 		"watch": "tsc -w -p ./",
 		"test": "mocha -u tdd ./out/test/"

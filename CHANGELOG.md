@@ -1,3 +1,9 @@
+## 2.32.1
+* Debug code in a separate window [Issue #132](https://github.com/OlegKunitsyn/gnucobol-debug/issues/132)
+  * via XTERM terminal on Linux
+  * via new-console option on Windows
+* Fix breakpoint on Windows
+
 ## 2.31.37
 * Update dependencies
 * Fix badges
