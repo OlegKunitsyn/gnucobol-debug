@@ -40,6 +40,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
     verbose: boolean;
     coverage: boolean;
     docker: string;
+    gdbtty: boolean;
 }
 
 export interface AttachRequestArguments extends DebugProtocol.LaunchRequestArguments {
@@ -86,7 +87,7 @@ export class GDBDebugSession extends DebugSession {
         this.started = false;
         this.attached = false;
 
-        this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug);
+        this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, args.noDebug, args.gdbtty);
         this.miDebugger.on("launcherror", this.launchError.bind(this));
         this.miDebugger.on("quit", this.quitEvent.bind(this));
         this.miDebugger.on("exited-normally", this.quitEvent.bind(this));
@@ -105,7 +106,7 @@ export class GDBDebugSession extends DebugSession {
         this.crashed = false;
         this.debugReady = false;
         this.useVarObjects = false;
-        this.miDebugger.load(args.cwd, args.target, args.arguments, args.group).then(() => {
+        this.miDebugger.load(args.cwd, args.target, args.arguments, args.group, args.gdbtty).then(() => {
             setTimeout(() => {
                 this.miDebugger.emit("ui-break-done");
             }, 50);
@@ -132,7 +133,7 @@ export class GDBDebugSession extends DebugSession {
         this.attached = true;
         this.started = false;
 
-        this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, false);
+        this.miDebugger = new MI2(args.gdbpath, args.gdbargs, args.cobcpath, args.cobcargs, args.env, args.verbose, false, false);
         this.miDebugger.on("launcherror", this.launchError.bind(this));
         this.miDebugger.on("quit", this.quitEvent.bind(this));
         this.miDebugger.on("exited-normally", this.quitEvent.bind(this));

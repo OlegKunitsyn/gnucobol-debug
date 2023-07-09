@@ -38,4 +38,9 @@ export class DebuggerSettings {
     public get cobcpath(): string {
         return this.getWithFallback<string>(this.extensionSettings, "cobcpath");
     }
+
+    public get gdbtty(): string {
+        return this.getWithFallback<string>(this.extensionSettings, "gdbtty");
+    }
+
 }

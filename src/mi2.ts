@@ -59,11 +59,12 @@ export class MI2 extends EventEmitter implements IDebugger {
     private buffer: string;
     private errbuf: string;
     private process: ChildProcess.ChildProcess;
+    private ps_command: ChildProcess.ChildProcess;
     private lastStepCommand: Function;
     private hasCobGetFieldStringFunction: boolean = true;
     private hasCobPutFieldStringFunction: boolean = true;
 
-    constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean) {
+    constructor(public gdbpath: string, public gdbArgs: string[], public cobcpath: string, public cobcArgs: string[], procEnv: any, public verbose: boolean, public noDebug: boolean, public gdbtty: boolean) {
         super();
         if (procEnv) {
             const env = {};
@@ -86,7 +87,7 @@ export class MI2 extends EventEmitter implements IDebugger {
         }
     }
 
-    load(cwd: string, target: string, targetargs: string, group: string[]): Thenable<any> {
+    load(cwd: string, target: string, targetargs: string, group: string[], gdbtty: boolean): Thenable<any> {
         if (!nativePath.isAbsolute(target) || (this.cobcpath === "docker" && this.gdbpath === "docker")) {
             target = nativePath.resolve(cwd, target);
         }
@@ -140,7 +141,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                     }
                 } while (match);
             });
-            buildProcess.on('exit', (code) => {
+            buildProcess.on('exit', async (code) => {
                 if (code !== 0) {
                     this.emit("quit");
                     return;
@@ -168,6 +169,50 @@ export class MI2 extends EventEmitter implements IDebugger {
                     target = target + '.exe';
                 }
 
+                // 001-Extension for debugging on a separate tty using xterm - start
+                let xterm_device_win = null;
+               
+                if (process.platform !== "win32" && gdbtty){
+                    let xterm_device = this.findXterm(target);
+                    if(xterm_device==""){
+                        let sleepVal=this.hashCode(target);
+                        this.log('stdio','TTY: sleep ' + sleepVal + ';');
+                        let dispTarget = (target.length>50)?"..."+target.substr(target.length-50,target.length):target;
+                        const xterm_args = [
+                            "-title","GnuCobol Debug - "+dispTarget,
+                            "-fa", "DejaVu Sans Mono", 
+                            "-fs", "14",
+                            "-e", "/usr/bin/tty;"+ 
+                            "echo 'GNUCOBOL DEBUG';"+ 
+                            "sleep "+sleepVal+";"
+                            ]
+        
+                            const xterm_process = ChildProcess.spawn("xterm", xterm_args, {
+                                detached: true,
+                                stdio: 'ignore',
+                            });
+                            xterm_process.unref();
+                            const sleep = async (milliseconds) => {
+                                await new Promise(resolve => setTimeout(resolve, milliseconds));
+                            }
+                            let try_find=0
+                            while(try_find<4){
+                                await sleep(500);
+                                xterm_device = this.findXterm(target);
+                                try_find++;
+                                if(xterm_device!="") break;
+                            }
+                            if(xterm_device==="") this.log("stderr","tty: Install 'xterm' to use gdb's tty option\n");
+                    }
+                    if(xterm_device.includes("pts")){
+                        this.gdbArgs.push("--tty="+xterm_device );
+                    }
+                }else if(process.platform === "win32"  && gdbtty){
+                    xterm_device_win = "yes"
+                }
+
+                // 001-End
+
                 this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, {cwd: cwd, env: this.procEnv});
                 this.process.stdout.on("data", this.stdout.bind(this));
                 this.process.stderr.on("data", ((data) => {
@@ -180,9 +225,10 @@ export class MI2 extends EventEmitter implements IDebugger {
                     this.emit("launcherror", err);
                 }).bind(this));
                 const promises = this.initCommands(target, targetargs, cwd);
+                if(xterm_device_win!=null) promises.push( this.sendCommand("gdb-set new-console on", false));
                 Promise.all(promises).then(() => {
                     this.emit("debug-ready");
-                    resolve();
+                    resolve(true);
                 }, reject);
             });
         });
@@ -254,7 +300,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                 const promises = this.initCommands(target, targetargs, cwd);
                 Promise.all(promises).then(() => {
                     this.emit("debug-ready");
-                    resolve();
+                    resolve(true);
                 }, reject);
             });
         });
@@ -272,6 +318,7 @@ export class MI2 extends EventEmitter implements IDebugger {
             this.sendCommand("gdb-set target-async on", false),
             this.sendCommand("gdb-set print repeats 1000", false),
             this.sendCommand("gdb-set args " + targetargs, false),
+            this.sendCommand("gdb-set charset UTF-8", false),
             this.sendCommand("environment-directory \"" + escape(cwd) + "\"", false),
             this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\"", false),
         ];
@@ -461,7 +508,7 @@ export class MI2 extends EventEmitter implements IDebugger {
 
                 this.sendCommand(command).then((info) => {
                     if (info.resultRecords.resultClass == expectingResultClass) {
-                        resolve();
+                        resolve(false);
                     } else {
                         reject();
                     }
@@ -977,4 +1024,33 @@ export class MI2 extends EventEmitter implements IDebugger {
     getSourceMap(): SourceMap {
         return this.map;
     }
+
+    findXterm(target): string {
+        let sleepVal = this.hashCode(target);
+        let fxterm_device = "";
+        var result = ChildProcess.execSync("ps -u");
+        let lines = result.toString().split("\n");
+        for (let key1 in lines) {
+            if(lines[key1].includes("sleep "+sleepVal)){
+                let pts = lines[key1].split(/\s+/);
+                for(let key2 in pts){
+                    if(pts[key2].includes("pts")){
+                        fxterm_device = "/dev/"+pts[key2];
+                    }
+                }
+            }
+        }
+        return fxterm_device;
+    }
+
+    hashCode(target: string): string {
+        let strCode = "";
+        for(var code = 0, i = 0, len = target.length; i < len; i++) {
+            code = (31 * code + target.charCodeAt(i)) << 0;
+        }
+        if(code<0) code*=-1;
+        if(code<900000) code+900000;
+        strCode = "" + code;
+        return strCode;
+      }
 }

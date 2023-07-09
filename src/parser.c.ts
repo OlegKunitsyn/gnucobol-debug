@@ -97,7 +97,7 @@ export class SourceMap {
             }
             match = procedureRegex.exec(line);
             if (match && !match[2]) {
-                if (this.lines.length > 0 && this.lines[this.lines.length - 1].fileCobol === fileCobol && this.lines[this.lines.length - 1].lineCobol === parseInt(match[1])) {
+                if (this.lines.length > 0 && fileNameCompare(this.lines[this.lines.length - 1].fileCobol, fileCobol) && this.lines[this.lines.length - 1].lineCobol === parseInt(match[1])) {
                     this.lines.pop();
                 }
                 this.lines.push(new Line(fileCobol, parseInt(match[1]), fileC, lineNumber + 2));
@@ -199,14 +199,14 @@ export class SourceMap {
         if (!nativePath.isAbsolute(fileCobol)) {
             fileCobol = nativePath.join(this.cwd, fileCobol);
         }
-        return this.lines.some(e => e.fileCobol === fileCobol && e.lineCobol === lineCobol);
+        return this.lines.some(e => fileNameCompare(e.fileCobol, fileCobol) && e.lineCobol === lineCobol);
     }
 
     public getLineC(fileCobol: string, lineCobol: number): Line {
         if (!nativePath.isAbsolute(fileCobol)) {
             fileCobol = nativePath.join(this.cwd, fileCobol);
         }
-        return this.lines.find(e => e.fileCobol === fileCobol && e.lineCobol === lineCobol) ?? new Line('', 0, '', 0);
+        return this.lines.find(e => fileNameCompare(e.fileCobol, fileCobol) && e.lineCobol === lineCobol) ?? new Line('', 0, '', 0);
     }
 
     public getLineCobol(fileC: string, lineC: number): Line {
@@ -237,4 +237,12 @@ export class SourceMap {
 
         return out;
     }
+
+}
+
+function fileNameCompare(fileNameOne: string, fileNameTwo: string): boolean {
+    if(process.platform === "win32")
+        return fileNameOne.toUpperCase() === fileNameTwo.toUpperCase();
+    else
+        return fileNameOne === fileNameTwo;
 }
