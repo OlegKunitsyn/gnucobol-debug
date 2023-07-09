@@ -19,14 +19,13 @@
 		},
 		{
 			"name": "Tests",
-			"type": "node",
+			"type": "extensionHost",
 			"request": "launch",
-			"cwd": "${workspaceFolder}",
-			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"runtimeExecutable": "${execPath}",
 			"args": [
-				"-u", "tdd",
-				"--colors",
-				"./out/test/"
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}",
+        		"--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
 			],
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
