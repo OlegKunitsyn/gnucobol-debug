@@ -187,11 +187,22 @@ How to install xterm on Ubuntu:
 ```
 sudo apt-get install xterm
 ```
-You need to call VS Code or VSCodium from the terminal, like this:
+
+On Linux you can see the output of the application in Vs Code itself. Add `gdbtty` property with `vscode` value to your `launch.json`. Here is an example:
+```json
+{
+            "name": "COBOL debugger",
+            "type": "gdb",
+            "request": "launch",
+            "cobcargs": [
+                "-free",
+                "-x"
+            ],
+            "coverage": false,
+            "gdbtty": "vscode"
+}
 ```
-cd  cob_project
-code .
-```
+![GdbTTY](gdbttyvscode.png)
 
 ### Roadmap
 - Mac

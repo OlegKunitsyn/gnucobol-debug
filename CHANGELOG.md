@@ -2,7 +2,7 @@
 * Debug code in a separate window [Issue #132](https://github.com/OlegKunitsyn/gnucobol-debug/issues/132)
   * via XTERM terminal on Linux
   * via new-console option on Windows
-* Fix breakpoint on Windows
+* Fix breakpoint on Windows [Issue #131](https://github.com/OlegKunitsyn/gnucobol-debug/issues/131)
 
 ## 2.31.37
 * Update dependencies

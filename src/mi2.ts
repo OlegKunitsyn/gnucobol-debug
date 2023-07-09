@@ -1,11 +1,12 @@
-import {Breakpoint, IDebugger, MIError, Stack, Thread, DebuggerVariable} from "./debugger";
+import { Breakpoint, IDebugger, MIError, Stack, Thread, DebuggerVariable } from "./debugger";
 import * as ChildProcess from "child_process";
-import {EventEmitter} from "events";
-import {MINode, parseMI} from './parser.mi2';
+import { EventEmitter } from "events";
+import { MINode, parseMI } from './parser.mi2';
 import * as nativePathFromPath from "path";
 import * as fs from "fs";
-import {SourceMap} from "./parser.c";
-import {parseExpression, cleanRawValue} from "./functions";
+import { SourceMap } from "./parser.c";
+import { parseExpression, cleanRawValue } from "./functions";
+import * as vscode from 'vscode';
 
 const nativePath = {
     resolve: function (...args: string[]): string {
@@ -40,6 +41,10 @@ const nonOutput = /(^(?:\d*|undefined)[\*\+\-\=\~\@\&\^])([^\*\+\-\=\~\@\&\^]{1,
 const gdbRegex = /(?:\d*|undefined)\(gdb\)/;
 const numRegex = /\d+/;
 const gcovRegex = /\"([0-9a-z_\-\/\s\\:]+\.o)\"/gi;
+let NEXT_TERM_ID = 1;
+// 002 - stepOver in routines with "perform"
+let subroutine = -1;
+// 002
 
 export function escape(str: string) {
     return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -59,7 +64,6 @@ export class MI2 extends EventEmitter implements IDebugger {
     private buffer: string;
     private errbuf: string;
     private process: ChildProcess.ChildProcess;
-    private ps_command: ChildProcess.ChildProcess;
     private lastStepCommand: Function;
     private hasCobGetFieldStringFunction: boolean = true;
     private hasCobPutFieldStringFunction: boolean = true;
@@ -100,12 +104,12 @@ export class MI2 extends EventEmitter implements IDebugger {
                 reject(new Error("cwd does not exist."));
             }
 
-            if (!!this.noDebug) {
+            if (!!this.noDebug && !gdbtty) {
                 const args = this.cobcArgs
                     .concat([target])
                     .concat(group)
                     .concat(['-job=' + targetargs]);
-                this.process = ChildProcess.spawn(this.cobcpath, args, {cwd: cwd, env: this.procEnv});
+                this.process = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
                 this.process.stderr.on("data", ((data) => {
                     this.log("stderr", data);
                 }).bind(this));
@@ -129,7 +133,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                 '-v',
                 target
             ]).concat(group);
-            const buildProcess = ChildProcess.spawn(this.cobcpath, args, {cwd: cwd, env: this.procEnv});
+            const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
             buildProcess.stderr.on('data', (data) => {
                 if (this.verbose)
                     this.log("stderr", data);
@@ -169,51 +173,14 @@ export class MI2 extends EventEmitter implements IDebugger {
                     target = target + '.exe';
                 }
 
-                // 001-Extension for debugging on a separate tty using xterm - start
-                let xterm_device_win = null;
-               
-                if (process.platform !== "win32" && gdbtty){
-                    let xterm_device = this.findXterm(target);
-                    if(xterm_device==""){
-                        let sleepVal=this.hashCode(target);
-                        this.log('stdio','TTY: sleep ' + sleepVal + ';');
-                        let dispTarget = (target.length>50)?"..."+target.substr(target.length-50,target.length):target;
-                        const xterm_args = [
-                            "-title","GnuCobol Debug - "+dispTarget,
-                            "-fa", "DejaVu Sans Mono", 
-                            "-fs", "14",
-                            "-e", "/usr/bin/tty;"+ 
-                            "echo 'GNUCOBOL DEBUG';"+ 
-                            "sleep "+sleepVal+";"
-                            ]
-        
-                            const xterm_process = ChildProcess.spawn("xterm", xterm_args, {
-                                detached: true,
-                                stdio: 'ignore',
-                            });
-                            xterm_process.unref();
-                            const sleep = async (milliseconds) => {
-                                await new Promise(resolve => setTimeout(resolve, milliseconds));
-                            }
-                            let try_find=0
-                            while(try_find<4){
-                                await sleep(500);
-                                xterm_device = this.findXterm(target);
-                                try_find++;
-                                if(xterm_device!="") break;
-                            }
-                            if(xterm_device==="") this.log("stderr","tty: Install 'xterm' to use gdb's tty option\n");
-                    }
-                    if(xterm_device.includes("pts")){
-                        this.gdbArgs.push("--tty="+xterm_device );
-                    }
-                }else if(process.platform === "win32"  && gdbtty){
-                    xterm_device_win = "yes"
+                // 001-gdbtty - Extension for debugging on a separate tty using xterm - start
+                let gdbttyParameters = [];
+                if (gdbtty) {
+                    await this.gbdTtyTerminal(gdbtty, target, gdbttyParameters);
                 }
+                // 001-gdbtty-End
 
-                // 001-End
-
-                this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, {cwd: cwd, env: this.procEnv});
+                this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, { cwd: cwd, env: this.procEnv });
                 this.process.stdout.on("data", this.stdout.bind(this));
                 this.process.stderr.on("data", ((data) => {
                     this.log("stderr", data);
@@ -225,7 +192,10 @@ export class MI2 extends EventEmitter implements IDebugger {
                     this.emit("launcherror", err);
                 }).bind(this));
                 const promises = this.initCommands(target, targetargs, cwd);
-                if(xterm_device_win!=null) promises.push( this.sendCommand("gdb-set new-console on", false));
+                // 001-gdbtty - additional parameters for gdb
+                for (let item of gdbttyParameters)
+                    promises.push(this.sendCommand("gdb-set " + item, false));
+                //001
                 Promise.all(promises).then(() => {
                     this.emit("debug-ready");
                     resolve(true);
@@ -254,7 +224,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                 '-v',
                 target
             ]).concat(group);
-            const buildProcess = ChildProcess.spawn(this.cobcpath, args, {cwd: cwd, env: this.procEnv});
+            const buildProcess = ChildProcess.spawn(this.cobcpath, args, { cwd: cwd, env: this.procEnv });
             buildProcess.stderr.on('data', (data) => {
                 if (this.verbose)
                     this.log("stderr", data);
@@ -286,7 +256,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                     target = target + '.exe';
                 }
 
-                this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, {cwd: cwd, env: this.procEnv});
+                this.process = ChildProcess.spawn(this.gdbpath, this.gdbArgs, { cwd: cwd, env: this.procEnv });
                 this.process.stdout.on("data", this.stdout.bind(this));
                 this.process.stderr.on("data", ((data) => {
                     this.log("stderr", data);
@@ -376,7 +346,7 @@ export class MI2 extends EventEmitter implements IDebugger {
     }
 
     onOutputStderr(lines) {
-        lines = <string[]> lines.split('\n');
+        lines = <string[]>lines.split('\n');
         lines.forEach(line => {
             this.log("stderr", line);
         });
@@ -391,7 +361,7 @@ export class MI2 extends EventEmitter implements IDebugger {
     }
 
     onOutput(linesStr: string) {
-        const lines = <string[]> linesStr.split('\n');
+        const lines = <string[]>linesStr.split('\n');
         lines.forEach(line => {
             if (couldBeOutput(line)) {
                 if (!gdbRegex.exec(line)) {
@@ -414,12 +384,15 @@ export class MI2 extends EventEmitter implements IDebugger {
                     this.log("stderr", parsed.result("msg") || line);
                 }
                 if (parsed.outOfBandRecord) {
-                    parsed.outOfBandRecord.forEach(record => {
+                    parsed.outOfBandRecord.forEach(async record => {
                         if (record.isStream) {
                             this.log(record.type, record.content);
                         } else {
                             if (record.type == "exec") {
                                 this.emit("exec-async-output", parsed);
+                                // 002 - stepOver in routines with "perform"
+                                subroutine = this.map.hasLineSubroutine(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')));
+                                // 002
                                 if (record.asyncClass == "running") {
                                     this.emit("running", parsed);
                                 } else if (record.asyncClass == "stopped") {
@@ -428,7 +401,20 @@ export class MI2 extends EventEmitter implements IDebugger {
                                         this.log("stderr", "stop: " + reason);
                                     }
                                     if (reason == "breakpoint-hit") {
-                                        this.emit("breakpoint", parsed);
+                                        if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
+                                            if(this.lastStepCommand==this.continue && parsed.record("disp")=="del")
+                                                this.lastStepCommand();
+                                            else
+                                                this.stepOver(); // 002 - stepInto/stepOut in routines with "perform" 
+                                        } else {
+                                            this.emit("step-end", parsed);
+                                        }
+                                    } else if (reason == "location-reached") { // 002 - stepOver in routines with "perform" 
+                                        if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
+                                            this.stepOver();
+                                        } else {
+                                            this.emit("step-end", parsed);
+                                        }
                                     } else if (reason == "end-stepping-range") {
                                         if (!this.map.hasLineCobol(parsed.record('frame.fullname'), parseInt(parsed.record('frame.line')))) {
                                             this.lastStepCommand();
@@ -489,13 +475,20 @@ export class MI2 extends EventEmitter implements IDebugger {
     }
 
     start(attachTarget?: string): Thenable<boolean> {
+        let command = "exec-run";
+        let expectingResultClass = "running";
         return new Promise((resolve, reject) => {
-            if (!!this.noDebug) {
+            if (!!this.noDebug) { // running with external gdbtty
+                this.sendCommand(command).then((info) => {
+                    if (info.resultRecords.resultClass == expectingResultClass) {
+                        resolve(false);
+                    } else {
+                        reject();
+                    }
+                }, reject);
                 return;
             }
             this.once("ui-break-done", () => {
-                let command = "exec-run";
-                let expectingResultClass = "running";
                 if (!!attachTarget) {
                     if (/^d+$/.test(attachTarget)) {
                         command = `target-attach ${attachTarget}`;
@@ -505,7 +498,6 @@ export class MI2 extends EventEmitter implements IDebugger {
                         expectingResultClass = "connected";
                     }
                 }
-
                 this.sendCommand(command).then((info) => {
                     if (info.resultRecords.resultClass == expectingResultClass) {
                         resolve(false);
@@ -551,6 +543,7 @@ export class MI2 extends EventEmitter implements IDebugger {
     }
 
     continue(): Thenable<boolean> {
+        this.lastStepCommand = this.continue;
         if (this.verbose) {
             this.log("stderr", "continue");
         }
@@ -566,17 +559,27 @@ export class MI2 extends EventEmitter implements IDebugger {
      * The underlying function executes entirely.
      * FIXME: Implement execution graph instead of exec-next fallback
      */
+    // 002 - stepOver in routines with "perform"
     stepOver(): Thenable<boolean> {
         this.lastStepCommand = this.stepOver;
         if (this.verbose) {
             this.log("stderr", "stepOver");
         }
-        return new Promise((resolve, reject) => {
-            this.sendCommand("exec-next").then((info) => {
-                resolve(info.resultRecords.resultClass == "running");
-            }, reject);
-        });
+        if (subroutine >= 0) {
+            return new Promise((resolve, reject) => {
+                this.sendCommand("exec-until " + subroutine).then((info) => {
+                    resolve(info.resultRecords.resultClass == "running");
+                }, reject);
+            });
+        } else {
+            return new Promise((resolve, reject) => {
+                this.sendCommand("exec-next").then((info) => {
+                    resolve(info.resultRecords.resultClass == "running");
+                }, reject);
+            });
+        }
     }
+    // 002
 
     /**
      * The command executes the line, then pauses at the next line.
@@ -587,11 +590,23 @@ export class MI2 extends EventEmitter implements IDebugger {
         if (this.verbose) {
             this.log("stderr", "stepInto");
         }
-        return new Promise((resolve, reject) => {
-            this.sendCommand("exec-step").then((info) => {
-                resolve(info.resultRecords.resultClass == "running");
-            }, reject);
-        });
+        // 002 - stepInto/setpOut in routines with "perform"
+        if (subroutine >= 0) {
+            return new Promise((resolve, reject) => {
+                this.sendCommand("break-insert -t " + subroutine).then(() => {
+                    this.sendCommand("exec-step").then((info) => {
+                        resolve(info.resultRecords.resultClass == "running");
+                    }, reject);
+                }, reject);
+            });
+        } else {
+            return new Promise((resolve, reject) => {
+                this.sendCommand("exec-step").then((info) => {
+                    resolve(info.resultRecords.resultClass == "running");
+                }, reject);
+            });
+        }
+        // 002
     }
 
     /**
@@ -862,6 +877,8 @@ export class MI2 extends EventEmitter implements IDebugger {
         for (const element of variables) {
             const key = MINode.valueOf(element, "name");
             const value = MINode.valueOf(element, "value");
+            //console.log("Key="+key);
+            //console.log("Value="+value);
 
             if (key.startsWith("b_")) {
                 const cobolVariable = this.map.getVariableByC(`${functionName}.${key}`);
@@ -1025,17 +1042,59 @@ export class MI2 extends EventEmitter implements IDebugger {
         return this.map;
     }
 
-    findXterm(target): string {
+    // 001- gdbtty - Extension for debugging on a separate tty using xterm - start
+    // Create or find an external terminal -> Xterm, Vs Code Terminal or Windows Console
+    async gbdTtyTerminal(gdbtty, target, gdbttyParameters) {
+        if (process.platform !== "win32") {
+            let xterm_device = this.findTtyName(target, gdbtty);
+            const isWslSsh = vscode.env.remoteName === "wsl" || vscode.env.remoteName === "ssh-remote";
+            if (xterm_device === "") {
+                let sleepVal = this.hashCode(target);
+                this.log('stdio', 'TTY: sleep ' + sleepVal + ';');
+                // wls - const wsl_process = ChildProcess.exec("cmd.exe /c start bash -c 'sleep "+sleepVal+"'");                      
+                if (isWslSsh) {
+                    this.createTerminal("vscode", sleepVal, target);
+                } else
+                    this.createTerminal(gdbtty, sleepVal, target);
+                const sleep = async (milliseconds) => {
+                    await new Promise(resolve => setTimeout(resolve, milliseconds));
+                }
+                let try_find=0;
+                while(try_find<4){
+                    await sleep(500);
+                    xterm_device = this.findTtyName(target, gdbtty);
+                    try_find++;
+                    if (xterm_device != "") break;
+                }
+                if (xterm_device === "") this.log("stderr", "tty: Install 'xterm' to use gdb's tty option\n");
+            }
+            if (xterm_device.includes("pts")) {
+                this.gdbArgs.push("--tty=" + xterm_device);
+                gdbttyParameters.push("env TERM=xterm");
+            }
+        } else {
+            if ((gdbtty + "") === "vscode") this.log("stderr", "Attention! The gdbtty property with value 'vscode' is only supported on Linux. Assuming 'external'.\n");
+            gdbttyParameters.push("new-console on");
+        }
+    }
+
+    // Finds the TTY name in the format /dev/pts/n - gdbtty
+    findTtyName(target, gdbtty): string {
         let sleepVal = this.hashCode(target);
         let fxterm_device = "";
         var result = ChildProcess.execSync("ps -u");
         let lines = result.toString().split("\n");
         for (let key1 in lines) {
-            if(lines[key1].includes("sleep "+sleepVal)){
+            if (lines[key1].includes("sleep " + sleepVal)) {
                 let pts = lines[key1].split(/\s+/);
-                for(let key2 in pts){
-                    if(pts[key2].includes("pts")){
-                        fxterm_device = "/dev/"+pts[key2];
+                for (let key2 in pts) {
+                    if (pts[key2].includes("pts")) {
+                        fxterm_device = "/dev/" + pts[key2];
+                        //Checks if the terminal is active
+                        if (process.platform != "win32" && (gdbtty + "") === "vscode") {
+                            if (!this.selectTerminal())
+                                fxterm_device = "";
+                        }
                     }
                 }
             }
@@ -1043,14 +1102,64 @@ export class MI2 extends EventEmitter implements IDebugger {
         return fxterm_device;
     }
 
+    // Hashcode to identify the application on sleep command - gdbtty
     hashCode(target: string): string {
         let strCode = "";
-        for(var code = 0, i = 0, len = target.length; i < len; i++) {
+        for (var code = 0, i = 0, len = target.length; i < len; i++) {
             code = (31 * code + target.charCodeAt(i)) << 0;
         }
-        if(code<0) code*=-1;
-        if(code<900000) code+900000;
+        if (code < 0) code *= -1;
+        if (code < 900000) code + 900000;
         strCode = "" + code;
         return strCode;
-      }
+    }
+
+    // Opens a terminal to show the application screen - gdbtty
+    createTerminal(gdbtty, sleepVal, target) {
+        if (gdbtty != "vscode") {
+            let dispTarget = (target.length > 50) ? "..." + target.substr(target.length - 50, target.length) : target;
+            const xterm_args = [
+                "-title", "GnuCOBOL Debug - " + dispTarget,
+                "-fa", "DejaVu Sans Mono",
+                "-fs", "14",
+                "-e", "/usr/bin/tty;" +
+                "echo 'GnuCOBOL DEBUG';" +
+                "sleep " + sleepVal + ";"
+            ]
+
+            const xterm_process = ChildProcess.spawn("xterm", xterm_args, {
+                detached: true,
+                stdio: 'ignore',
+            });
+            xterm_process.unref();
+        } else {
+            let terminal = this.selectTerminal();
+            if (!terminal) {
+                terminal = vscode.window.createTerminal({
+                    name: `GnuCOBOL Debug Display #${NEXT_TERM_ID++}`,
+                    location: vscode.window.activeTextEditor
+                } as any
+                );
+            }
+            terminal.sendText("trap '' 2;")
+            terminal.sendText("clear;sleep " + sleepVal + ";");
+            vscode.window.onDidCloseTerminal((terminal) => {
+                vscode.window.showInformationMessage(`Terminal '${terminal.name}' was closed.`);
+            });
+            terminal.show();
+        }
+    }
+
+    // Find the terminal used in debug in vscode - gdbtty
+    selectTerminal(): vscode.Terminal | undefined {
+        const terminals = <vscode.Terminal[]>(<any>vscode.window).terminals;
+        let itemTerm: vscode.Terminal = undefined;
+        terminals.map(t => {
+            if (t.name.includes("GnuCOBOL Debug Display")) {
+                itemTerm = t;
+            }
+        });
+        return itemTerm;
+    }
+    // 001- gdbtty - Extension for debugging on a separate tty using xterm - start
 }

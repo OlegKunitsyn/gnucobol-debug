@@ -1,5 +1,5 @@
 import {MINode} from "./parser.mi2";
-import {DebugProtocol} from "vscode-debugprotocol/lib/debugProtocol";
+import {DebugProtocol} from "@vscode/debugprotocol/lib/debugProtocol";
 import {removeLeadingZeroes} from "./functions";
 import {SourceMap} from "./parser.c";
 

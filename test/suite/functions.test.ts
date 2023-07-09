@@ -1,10 +1,10 @@
 import * as assert from 'assert';
 import * as nativePath from "path";
-import { SourceMap } from '../src/parser.c';
-import { parseExpression, cleanRawValue } from '../src/functions';
+import { SourceMap } from '../../src/parser.c';
+import { parseExpression, cleanRawValue } from '../../src/functions';
 
 suite("Useful functions", () => {
-    const cwd = nativePath.resolve(__dirname, '../../test/resources');
+    const cwd = nativePath.resolve(__dirname, '../../../test/resources');
     const c = nativePath.resolve(cwd, 'petstore.c');
     const parsed = new SourceMap(cwd, [c]);
     console.log(parsed.toString());

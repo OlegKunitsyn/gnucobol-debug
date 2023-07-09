@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { parseMI, MINode } from '../src/parser.mi2';
+import { parseMI, MINode } from '../../src/parser.mi2';
 
 suite("MI Parse", () => {
 	test("Simple out of band record", () => {

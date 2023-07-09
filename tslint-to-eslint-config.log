@@ -1,0 +1,12 @@
+5 ESLint rules behave differently from their TSLint counterparts:
+  * arrow-body-style:
+    - ESLint will throw an error if the function body is multiline yet has a one-line return on it.
+  * one-var:
+    - Variables declared in for loops will no longer be checked.
+  * no-invalid-this:
+    - Functions in methods will no longer be ignored.
+  * @typescript-eslint/no-unused-expressions:
+    - The TSLint optional config "allow-new" is the default ESLint behavior and will no longer be ignored.
+  * no-underscore-dangle:
+    - Leading and trailing underscores (_) on identifiers will now be ignored.
+

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { couldBeOutput } from '../src/mi2';
+import { couldBeOutput } from '../../src/mi2';
 
 suite("GDB output", () => {
 	test("Empty", () => {

@@ -1,4 +1,4 @@
-import * as DebugAdapter from 'vscode-debugadapter';
+import * as DebugAdapter from '@vscode/debugadapter';
 import {
     DebugSession,
     Handles,
@@ -11,8 +11,8 @@ import {
     TerminatedEvent,
     Thread,
     ThreadEvent
-} from 'vscode-debugadapter';
-import {DebugProtocol} from 'vscode-debugprotocol';
+} from '@vscode/debugadapter';
+import {DebugProtocol} from '@vscode/debugprotocol';
 import {VariableObject} from './debugger';
 import {MINode} from './parser.mi2';
 import {MI2} from './mi2';
@@ -429,6 +429,7 @@ export class GDBDebugSession extends DebugSession {
                 const variables: DebugProtocol.Variable[] = [];
                 const [threadId, level] = this.frameIdToThreadAndLevel(id);
                 const stackVariables = await this.miDebugger.getStackVariables(threadId, level);
+                globalThis.varGlobal = [];
                 for (const stackVariable of stackVariables) {
                     let reference = 0;
                     if (this.showVariableDetails || !!stackVariable.children.size) {
@@ -447,6 +448,16 @@ export class GDBDebugSession extends DebugSession {
                         type: stackVariable.displayableType,
                         variablesReference: reference
                     });
+                    if(stackVariable.hasChildren){
+                        const child= stackVariable.children;
+                        for (var childs of stackVariable.children.entries()) {
+                            var key = childs[0];
+                            globalThis.varGlobal.push({
+                                "children": key,
+                                "father": stackVariable.cobolName
+                            })
+                        }
+                    }     
                 }
 
                 response.body = {
