@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { NumericValueParser, AlphanumericValueParser } from '../src/debugger';
+import { NumericValueParser, AlphanumericValueParser } from '../../src/debugger';
 
 suite("Variable Value Parser", () => {
     

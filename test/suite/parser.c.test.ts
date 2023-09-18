@@ -1,9 +1,9 @@
 import * as assert from 'assert';
 import * as nativePath from "path";
-import { SourceMap } from '../src/parser.c';
+import { SourceMap } from '../../src/parser.c';
 
 suite("C code parse", () => {
-	const cwd = nativePath.resolve(__dirname, '../../test/resources');
+	const cwd = nativePath.resolve(__dirname, '../../../test/resources');
 	test("Minimal", () => {
 		const c = nativePath.resolve(cwd, 'hello.c');
 		const cobol = '/home/olegs/projects/gnucobol-debug/test/resources/hello.cbl';
