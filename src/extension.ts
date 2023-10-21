@@ -58,6 +58,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.debug.registerDebugConfigurationProvider('gdb', new GdbConfigurationProvider()),
         vscode.debug.registerDebugAdapterDescriptorFactory('gdb', new GdbAdapterDescriptorFactory(new CoverageStatus(), new GDBDebugSession())),
         vscode.languages.registerEvaluatableExpressionProvider('GnuCOBOL', new GnuCOBOLEvalExpressionFactory()),
+        vscode.languages.registerEvaluatableExpressionProvider('GnuCOBOL31', new GnuCOBOLEvalExpressionFactory()),
+        vscode.languages.registerEvaluatableExpressionProvider('GnuCOBOL32', new GnuCOBOLEvalExpressionFactory()),
         vscode.languages.registerEvaluatableExpressionProvider('COBOL', new GnuCOBOLEvalExpressionFactory()),
     );
 }
