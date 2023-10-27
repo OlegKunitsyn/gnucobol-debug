@@ -10,11 +10,10 @@
 <h4 align="center">Debug COBOL code from VS Code or VSCodium.</h4>
 
 <p align="center">
-  <img src="https://img.shields.io/github/workflow/status/OlegKunitsyn/gnucobol-debug/Node.js%20CI.svg?label=Node.js%20CI" />
   <img src="https://img.shields.io/github/v/tag/OlegKunitsyn/gnucobol-debug" />
   <img src="https://img.shields.io/visual-studio-marketplace/d/OlegKunitsyn.gnucobol-debug" />
   <img src="https://img.shields.io/visual-studio-marketplace/i/OlegKunitsyn.gnucobol-debug" />
-  <img src="https://github.com/OlegKunitsyn/gnucobol-debug/workflows/Node.js%20CI/badge.svg" />
+  <img src="https://github.com/OlegKunitsyn/gnucobol-debug/actions/workflows/nodejs.yml/badge.svg" />
 </p>
 
 An extension to debug or execute GnuCOBOL code. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=OlegKunitsyn.gnucobol-debug) or [Open VSX-Registry](https://open-vsx.org/extension/OlegKunitsyn/gnucobol-debug).
