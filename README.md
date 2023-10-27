@@ -10,7 +10,6 @@
 <h4 align="center">Debug COBOL code from VS Code or VSCodium.</h4>
 
 <p align="center">
-  <img src="https://img.shields.io/github/workflow/status/OlegKunitsyn/gnucobol-debug/Node.js%20CI.svg?label=Node.js%20CI" />
   <img src="https://img.shields.io/github/v/tag/OlegKunitsyn/gnucobol-debug" />
   <img src="https://img.shields.io/visual-studio-marketplace/d/OlegKunitsyn.gnucobol-debug" />
   <img src="https://img.shields.io/visual-studio-marketplace/i/OlegKunitsyn.gnucobol-debug" />
