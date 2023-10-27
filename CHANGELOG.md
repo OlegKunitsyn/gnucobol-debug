@@ -1,3 +1,24 @@
+## 3.32.0
+* Updates [Issue #138](https://github.com/OlegKunitsyn/gnucobol-debug/issues/138) by MARCOS MARTINS DUMA
+  * Migrate from TSLint to ESLint
+  * Update package name `vscode-debugadapter` and `debugadapter-testsupport`.
+* Improvements [Issue #134](https://github.com/OlegKunitsyn/gnucobol-debug/issues/134) by MARCOS MARTINS DUMA
+  * Allow viewing of variables with the `-` character in the name
+  * Enable hovering on child variables
+  * Display debug output in the VSCode terminal
+  * Set `XTERM` variable to the correct display during debugging with the GDB TTY option
+  * Utilize gdbtty for debugging on WSL and SSH (Windows -> Linux)
+  * Perform `stepOver` in subroutines called by `PERFORM` statement
+  * Support `stepInto`/`stepOut` in subroutines called by `PERFORM` statement
+  * Run Gdbtty with Ctrl-F5
+  * Provide support for symbolic link directories on linux.
+* Support for newer extension ids [Issue #139](https://github.com/OlegKunitsyn/gnucobol-debug/issues/139) by Simon Sobisch
+* Experimental by MARCOS MARTINS DUMA
+  * format
+  * remove log file
+  * Set value `-` fix for Oracle Linux
+  * Hover variables in GnuCOBOL31 and GnuCOBOL32.
+
 ## 2.32.1
 * Debug code in a separate window [Issue #132](https://github.com/OlegKunitsyn/gnucobol-debug/issues/132)
   * via XTERM terminal on Linux
