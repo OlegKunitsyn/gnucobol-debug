@@ -660,7 +660,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                 if (variable.cName.startsWith("f_")) {
                     cName += ".data";
                 }
-                await this.sendCommand(`data-evaluate-expression "(void)memcpy(${cName}, \\"${finalValue}\\", ${variable.size})"`);
+                await this.sendCommand(`data-evaluate-expression "(void)strncpy(${cName}, \\"${finalValue}\\", ${variable.size})"`);
             }
         } catch (e) {
             if (e.message.includes("No symbol \"cob_put_field_str\"")) {

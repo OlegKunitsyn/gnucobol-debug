@@ -1,4 +1,4 @@
-import * as DebugAdapter from 'vscode-debugadapter';
+import * as DebugAdapter from '@vscode/debugadapter';
 import {
     DebugSession,
     Handles,
@@ -11,8 +11,8 @@ import {
     TerminatedEvent,
     Thread,
     ThreadEvent
-} from 'vscode-debugadapter';
-import {DebugProtocol} from 'vscode-debugprotocol';
+} from '@vscode/debugadapter';
+import {DebugProtocol} from '@vscode/debugprotocol';
 import {VariableObject} from './debugger';
 import {MINode} from './parser.mi2';
 import {MI2} from './mi2';
