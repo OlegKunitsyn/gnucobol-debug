@@ -180,13 +180,6 @@ Add `gdbtty` property to your `launch.json`. Here’s an example:
 ```
 ![GdbTTY](gdbttydisplay.png)
 
-* Linux Requirements: `xterm`
-
-How to install xterm on Ubuntu: 
-```
-sudo apt-get install xterm
-```
-
 On Linux you can see the output of the application in Vs Code itself. Add `gdbtty` property with `vscode` value to your `launch.json`. Here is an example:
 ```json
 {
@@ -202,6 +195,8 @@ On Linux you can see the output of the application in Vs Code itself. Add `gdbtt
 }
 ```
 ![GdbTTY](gdbttyvscode.png)
+
+You can also use these options with `gdbtty`: `xterm`, `gnome-terminal`, `konsole` and `xfce4-terminal`.
 
 ### Roadmap
 - Mac

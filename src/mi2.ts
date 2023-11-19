@@ -1066,7 +1066,7 @@ export class MI2 extends EventEmitter implements IDebugger {
                     try_find++;
                     if (xterm_device != "") break;
                 }
-                if (xterm_device === "") this.log("stderr", "tty: Install 'xterm' to use gdb's tty option\n");
+                if (xterm_device === "") this.log("stderr", "tty: Install a terminal to use gdb's tty option\n");
             }
             if (xterm_device.includes("pts")) {
                 this.gdbArgs.push("--tty=" + xterm_device);
@@ -1114,24 +1114,113 @@ export class MI2 extends EventEmitter implements IDebugger {
         return strCode;
     }
 
+    isTerminalInstalled(terminalCommand: string): boolean {
+        try {
+            ChildProcess.execSync(`command -v ${terminalCommand}`);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    createXFCETerminal(sleepVal, target) {
+        let dispTarget = (target.length > 50) ? "..." + target.substr(target.length - 50, target.length) : target;
+        let param = "bash -c 'echo \"GnuCOBOL DEBUG\"; sleep " + sleepVal + ";'";
+        const xfce4_terminal_args = [
+            "--title", "GnuCOBOL Debug - " + dispTarget,
+            "--font=DejaVu Sans Mono 14",
+            "--command", param
+        ]
+        const xfce_process = ChildProcess.spawn("xfce4-terminal", xfce4_terminal_args, {
+            detached: true,
+            stdio: 'ignore'
+        });
+        xfce_process.unref();
+    }
+
+    createKDETerminal(sleepVal, target) {
+        let dispTarget = (target.length > 50) ? "..." + target.substr(target.length - 50, target.length) : target;
+        let param = "bash -c 'echo \"GnuCOBOL DEBUG\"; sleep " + sleepVal + ";'";
+        const konsole_args = [
+            "--title", "GnuCOBOL Debug - " + dispTarget,
+            "--separate",
+            "--nofork",
+            "--hold",
+            "-e",
+            param
+        ]
+        const kde_process = ChildProcess.spawn("konsole", konsole_args, {
+            detached: true,
+            stdio: 'ignore'
+        });
+        kde_process.unref();
+    }
+
+    createGNOMETerminal(sleepVal, target) {
+        let dispTarget = (target.length > 50) ? "..." + target.substr(target.length - 50, target.length) : target;
+        const gnome_terminal_args = [
+            "--title", "GnuCOBOL Debug - " + dispTarget,
+            "--",
+            "bash", "-c","echo 'GnuCOBOL DEBUG';" + "sleep " + sleepVal + ";"
+        ]
+        const gnome_process = ChildProcess.spawn("gnome-terminal", gnome_terminal_args, {
+            detached: true,
+            stdio: 'ignore',
+        });
+        gnome_process.unref();
+    }
+
+    createXtermTerminal(sleepVal, target) {
+        let dispTarget = (target.length > 50) ? "..." + target.substr(target.length - 50, target.length) : target;
+        const xterm_args = [
+            "-title", "GnuCOBOL Debug - " + dispTarget,
+            "-fa", "DejaVu Sans Mono",
+            "-fs", "14",
+            "-e", "/usr/bin/tty;" +
+            "echo 'GnuCOBOL DEBUG';" +
+            "sleep " + sleepVal + ";"
+        ]
+        const xterm_process = ChildProcess.spawn("xterm", xterm_args, {
+            detached: true,
+            stdio: 'ignore',
+        });
+        xterm_process.unref();
+    }
+
     // Opens a terminal to show the application screen - gdbtty
     createTerminal(gdbtty, sleepVal, target) {
+        let findTerminal = true;
         if (gdbtty != "vscode") {
-            let dispTarget = (target.length > 50) ? "..." + target.substr(target.length - 50, target.length) : target;
-            const xterm_args = [
-                "-title", "GnuCOBOL Debug - " + dispTarget,
-                "-fa", "DejaVu Sans Mono",
-                "-fs", "14",
-                "-e", "/usr/bin/tty;" +
-                "echo 'GnuCOBOL DEBUG';" +
-                "sleep " + sleepVal + ";"
-            ]
-
-            const xterm_process = ChildProcess.spawn("xterm", xterm_args, {
-                detached: true,
-                stdio: 'ignore',
-            });
-            xterm_process.unref();
+            if (typeof gdbtty === 'string' && gdbtty!="external") {  
+                if(this.isTerminalInstalled(gdbtty)){
+                    findTerminal = false;
+                    switch (gdbtty) {
+                        case "xterm":
+                            this.createXtermTerminal(sleepVal, target);
+                            break;
+                        case "gnome-terminal":
+                            this.createGNOMETerminal(sleepVal, target);
+                            break;
+                        case "konsole":
+                            this.createKDETerminal(sleepVal, target);
+                            break;
+                        case "xfce4-terminal":
+                            this.createXFCETerminal(sleepVal, target);
+                            break;
+                    }
+                }
+            }
+            if(findTerminal){
+                if(this.isTerminalInstalled("xterm")){
+                    this.createXtermTerminal(sleepVal, target);
+                }else if(this.isTerminalInstalled("gnome-terminal")){
+                    this.createGNOMETerminal(sleepVal, target);
+                }else if(this.isTerminalInstalled("xfce4-terminal")){
+                    this.createXFCETerminal(sleepVal, target);
+                }else if(this.isTerminalInstalled("konsole")){
+                    this.createKDETerminal(sleepVal, target);
+                }
+            }
         } else {
             let terminal = this.selectTerminal();
             if (!terminal) {
