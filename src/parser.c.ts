@@ -84,8 +84,10 @@ export class SourceMap {
             return;
         }
         this.filesModule.set(fileModule, true);
-        if (fs.existsSync(fileModule)) {
-            const fileC = fileModule.split('.').slice(0, -1).join('.') + '.c';
+        let nat = nativePathFromPath.resolve(this.cwd, fileModule);
+        if (fs.existsSync(nat)) {
+            let fileC = fileModule.split('.').slice(0, -1).join('.') + '.c';
+            fileC = nativePath.resolve(this.cwd, fileC);
             if (fs.existsSync(fileC)) {
                 this.parse(nativePath.basename(fileC));
             }
