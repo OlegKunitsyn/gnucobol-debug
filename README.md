@@ -180,13 +180,6 @@ Add `gdbtty` property to your `launch.json`. Here’s an example:
 ```
 ![GdbTTY](gdbttydisplay.png)
 
-* Linux Requirements: `xterm`
-
-How to install xterm on Ubuntu: 
-```
-sudo apt-get install xterm
-```
-
 On Linux you can see the output of the application in Vs Code itself. Add `gdbtty` property with `vscode` value to your `launch.json`. Here is an example:
 ```json
 {
@@ -202,6 +195,22 @@ On Linux you can see the output of the application in Vs Code itself. Add `gdbtt
 }
 ```
 ![GdbTTY](gdbttyvscode.png)
+
+You can also use these options with `gdbtty`: `xterm`, `gnome-terminal`, `konsole` and `xfce4-terminal`.
+
+### Debugging Modules
+
+It is possible to debug modules as long as you compile them in the same directory as your source code, using the following command:
+
+``` bash
+cobc -g -fsource-location -ftraceall -v -O0 -m prog.cob
+```
+In this example, p0.cob is the source code of the executable, and p1.cob is the source code of the module (.dll on Windows or .so on Linux).
+
+![Load Module](loadmodule1.png)
+
+![Load Module](loadmodule2.png)
+
 
 ### Roadmap
 - Mac
